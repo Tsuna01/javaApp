@@ -122,16 +122,8 @@ public class Screen extends JFrame {
 
         root.add(main, BorderLayout.CENTER);
 
-        // ------- FOOTER ------- //
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setBackground(Color.WHITE);
-        footer.setBorder(new EmptyBorder(12, 16, 12, 16));
-        JLabel copy = new JLabel("tel. 191 called with admin");
-        copy.setForeground(new Color(107, 114, 128)); // slate-500
-        footer.add(copy, BorderLayout.WEST);
-        root.add(footer, BorderLayout.SOUTH);
 
-        // คุณภาพชีวิตเล็กน้อย: Enter = กดปุ่ม
+        
         getRootPane().setDefaultButton(btn);
     }
 

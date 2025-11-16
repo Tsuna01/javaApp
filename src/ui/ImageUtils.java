@@ -2,6 +2,7 @@ package ui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.net.URL;
 
@@ -30,4 +31,45 @@ class ImageUtils {
         g2.dispose();
         return new ImageIcon(img);
     }
+    
+    public static ImageIcon makeRoundedIcon(ImageIcon imageIcon, int diameter) {
+        if (imageIcon == null || imageIcon.getImage() == null) {
+            System.err.println("⚠️ imageIcon is null!");
+            return null;
+        }
+
+        int w = imageIcon.getIconWidth();
+        int h = imageIcon.getIconHeight();
+
+        // ทำให้เป็นสี่เหลี่ยมจัตุรัสจากตรงกลาง
+        int size = Math.min(w, h);
+        int x = (w - size) / 2;
+        int y = (h - size) / 2;
+
+        BufferedImage square = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g1 = square.createGraphics();
+        g1.drawImage(imageIcon.getImage(), -x, -y, null);
+        g1.dispose();
+
+        // Resize เป็นขนาดที่ต้องการ
+        Image scaled = square.getScaledInstance(diameter, diameter, Image.SCALE_SMOOTH);
+
+        // ตัดให้เป็นวงกลม
+        BufferedImage rounded = new BufferedImage(diameter, diameter, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = rounded.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g2.setComposite(AlphaComposite.Clear);
+        g2.fillRect(0, 0, diameter, diameter);
+
+        g2.setComposite(AlphaComposite.Src);
+        Shape circle = new Ellipse2D.Float(0, 0, diameter, diameter);
+        g2.setClip(circle);
+
+        g2.drawImage(scaled, 0, 0, null);
+        g2.dispose();
+
+        return new ImageIcon(rounded);
+    }
+
 }
