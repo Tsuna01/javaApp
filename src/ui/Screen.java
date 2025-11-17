@@ -1,12 +1,16 @@
 package ui;
 
+import util.ImageUtils;
+import util.RoundedLineBorder;
+import util.RoundedPanel;
+import service.Auth;
+
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 
-/** Screen ที่ปรับสไตล์ + มุมมน + ระยะห่างให้เรียบร้อย */
+
 public class Screen extends JFrame {
     public Screen() {
         setTitle("Myapp");
@@ -32,9 +36,9 @@ public class Screen extends JFrame {
         left.setBackground(Color.WHITE);
         left.setBorder(new EmptyBorder(12, 12, 12, 12));
 
-        JLabel hero = new JLabel(ImageUtils.loadScaled("assets/hero.png", 360, 280));
-        hero.setHorizontalAlignment(SwingConstants.CENTER);
-        left.add(hero, BorderLayout.CENTER);
+        JLabel sut = new JLabel(ImageUtils.loadScaled("assets/hero.png", 360, 280));
+        sut.setHorizontalAlignment(SwingConstants.CENTER);
+        left.add(sut, BorderLayout.CENTER);
 
         gc.gridx = 0; gc.gridy = 0;
         gc.weightx = 1.2; gc.weighty = 1;
@@ -65,7 +69,7 @@ public class Screen extends JFrame {
         userLabel.setForeground(new Color(71, 85, 105)); // slate-600
         right.add(userLabel, g2);
 
-        // Username input (มุมมน + padding ภายใน)
+        // Username input
         g2.gridy = 2;
         JTextField txtUser = new JTextField(20);
         txtUser.setBorder(compoundRoundedBorder(14, new Color(203, 213, 225), 2,  // เส้นขอบ
@@ -78,7 +82,7 @@ public class Screen extends JFrame {
         passLabel.setForeground(new Color(71, 85, 105));
         right.add(passLabel, g2);
 
-        // Password input (มุมมน + padding ภายใน)
+        // Password input
         g2.gridy = 4;
         JPasswordField txtPass = new JPasswordField(20);
         txtPass.setBorder(compoundRoundedBorder(14, new Color(203, 213, 225), 2,
@@ -87,7 +91,7 @@ public class Screen extends JFrame {
 
 
 
-        // ปุ่ม Login (มุมมน + สีปุ่ม)
+        // ปุ่ม Login
         g2.gridy = 5;
         JButton btn = new JButton("Login");
         btn.setFocusPainted(false);
@@ -95,6 +99,22 @@ public class Screen extends JFrame {
         btn.setBackground(new Color(59, 130, 246)); // blue-500
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(0, 44));
+
+        btn.addActionListener(e -> {
+            String user = txtUser.getText().trim();
+            String pass = new String(txtPass.getPassword());
+
+            boolean ok = Auth.login(user, pass);
+            if (ok) {
+                JOptionPane.showMessageDialog(this, "Login Success!");
+
+
+                new Profile().setVisible(true);
+                this.dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid username or password!");
+            }
+        });
         
         right.add(btn, g2);
         
