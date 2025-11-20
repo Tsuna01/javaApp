@@ -3,65 +3,77 @@ package ui;
 import ui.component.Cardport;
 import ui.component.Navbar;
 
+import util.WrapLayout;
+
 import javax.swing.*;
 import java.awt.*;
 import javax.swing.border.EmptyBorder;
 
 public class SectionMain extends JFrame {
 
-    private JFrame frame;
-
-    public static void main(String[] args) {
-        EventQueue.invokeLater(() -> {
-            SectionMain s = new SectionMain();
-            s.frame.setVisible(true);
-        });
-    }
-
     public SectionMain() {
         initialize();
     }
 
+    public static void main(String[] args) {
+        EventQueue.invokeLater(() -> {
+            SectionMain s = new SectionMain();
+            s.setVisible(true);
+        });
+    }
+
     private void initialize() {
 
+        // ===== FRAME =====
         setTitle("Main");
         setSize(1100, 700);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+
         setLayout(new BorderLayout());
 
-        // ---------- ใช้ Navbar จาก Navbar.java ---------- //
+        // ===== NAVBAR =====
         JPanel navbar = new Navbar().build();
         add(navbar, BorderLayout.NORTH);
 
-        // ------------ CONTENT WRAPPER ---------------- //
-        JPanel page = new JPanel(new BorderLayout());
-        page.setBackground(new Color(245, 245, 245));
-        add(page, BorderLayout.CENTER);
+        // ===== CONTENT WRAPPER =====
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(new Color(245, 245, 245));
+        add(content, BorderLayout.CENTER);
 
-        // ------------ TITLE -------------- //
-        JLabel title = new JLabel("Available Jobs (8)");
-        title.setFont(new Font("Tahoma", Font.BOLD, 26));
-        title.setBorder(new EmptyBorder(20, 30, 20, 10));
-        page.add(title, BorderLayout.NORTH);
+        // ===== TITLE SECTION =====
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setBackground(new Color(245, 245, 245));
 
-        // ------------ GRID PANEL (2 คอลัม) ---------------- //
-        JPanel grid = new JPanel();
-        grid.setBackground(Color.WHITE);
+        titlePanel.setBorder(new EmptyBorder(20, 30, 10, 30));
 
-        grid.setLayout(new GridLayout(0, 2, 40, 40)); // 2 คอลัม
-        grid.setBorder(new EmptyBorder(20, 20, 20, 20));
+        JLabel title = new JLabel("Title");
+        title.setFont(new Font("Tahoma", Font.BOLD, 18));
+        titlePanel.add(title, BorderLayout.WEST);
 
-        // ทดสอบ add card
-        for (int i = 0; i < 8; i++) {
-            grid.add(new Cardport());
+        content.add(titlePanel, BorderLayout.NORTH);
+
+        // ===== GRID SECTION (4 COLUMNS) =====
+        JPanel section = new JPanel();
+        section.setBackground(new Color(245, 245, 245));
+
+        // padding ขอบรอบ grid
+        section.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Grid 4 คอลัมน์, auto rows, spacing 20px
+        section.setLayout(new GridLayout(0, 3, 20, 20));
+
+        // เพิ่ม Cardport ตัวอย่าง
+        for (int i = 0; i < 15; i++) {
+            section.add(new Cardport());
         }
 
-        JScrollPane scroll = new JScrollPane(grid);
+        // ===== SCROLLPANE เพื่อเลื่อนลง =====
+        JScrollPane scroll = new JScrollPane(section);
         scroll.setBorder(null);
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-        page.add(scroll, BorderLayout.CENTER);
+        content.add(scroll, BorderLayout.CENTER);
     }
 }
