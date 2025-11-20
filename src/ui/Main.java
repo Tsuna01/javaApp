@@ -5,6 +5,6 @@ import javax.swing.*;
 public class Main {
     public static void main(String[] args) {
 
-        SwingUtilities.invokeLater(() -> new Screen().setVisible(true));
+        SwingUtilities.invokeLater(() -> new SectionMain().setVisible(true));
     }
 }
