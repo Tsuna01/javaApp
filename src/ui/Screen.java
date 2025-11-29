@@ -3,7 +3,7 @@ package ui;
 import util.ImageUtils;
 import util.RoundedLineBorder;
 import util.RoundedPanel;
-import service.Auth;
+
 
 import javax.swing.*;
 import javax.swing.border.Border;

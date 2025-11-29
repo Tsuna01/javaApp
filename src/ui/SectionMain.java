@@ -126,37 +126,38 @@ public class SectionMain extends JFrame {
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
-        JLabel title = new JLabel("Available Jobs(4)");
+        JLabel title = new JLabel("My Job");
         title.setFont(FONT_TITLE);
 
-        // Search Bar
+        // Search Bar with Filter Icon
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.setOpaque(false);
-        searchPanel.setPreferredSize(new Dimension(500, 50));
+        searchPanel.setPreferredSize(new Dimension(200, 40));
 
-        JTextField searchField = new JTextField("Search ************") {
+        JTextField searchField = new JTextField("  Search") {
             @Override
             protected void paintComponent(Graphics g) {
-                if (!isOpaque() && getBorder() instanceof RoundedBorder) {
+                if (!isOpaque() && getBorder() instanceof MyJob.RoundedBorder) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2.setColor(Color.WHITE);
-                    g2.fill(((RoundedBorder) getBorder()).getShape(0, 0, getWidth() - 1, getHeight() - 1));
+                    g2.fill(((MyJob.RoundedBorder) getBorder()).getShape(0, 0, getWidth() - 1, getHeight() - 1));
                     g2.dispose();
                 }
                 super.paintComponent(g);
             }
         };
         searchField.setOpaque(false);
-        searchField.setBorder(new RoundedBorder(40));
+        searchField.setBorder(new MyJob.RoundedBorder(25));
         searchField.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
+        searchPanel.add(searchField, BorderLayout.CENTER);
+
         panel.add(title, BorderLayout.WEST);
-        panel.add(searchField, BorderLayout.EAST);
+        panel.add(searchPanel, BorderLayout.EAST);
 
         return panel;
     }
-
     // ========= JOB GRID ==========
     private JScrollPane createJobGrid() {
         JPanel grid = new JPanel(new GridLayout(0, 2, 30, 30)); // 2 Columns

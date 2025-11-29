@@ -50,6 +50,12 @@ public class Navbar {
         JButton btn1 = createNavButton("Available Job");
         JButton btn2 = createNavButton("My Job");
 
+        if(btn2.getText() == "My Job"){
+            btn2.addActionListener(e -> {
+
+            });
+        }
+
         right.add(btn1);
         right.add(btn2);
 
@@ -63,6 +69,7 @@ public class Navbar {
     private JButton createNavButton(String text) {
         JButton btn = new JButton(text) {
             private boolean hovered = false;
+
 
             @Override
             protected void paintComponent(Graphics g) {

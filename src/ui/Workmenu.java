@@ -1,5 +1,7 @@
 package ui;
 
+import ui.component.Editperson;
+import ui.component.Navbar;
 import util.RoundedPanel;
 
 import javax.swing.*;
@@ -37,9 +39,7 @@ public class Workmenu extends JFrame {
         topSection.setBackground(new Color(245, 245, 245));
 
         // Header
-        JPanel headerPanel = createHeader();
-        topSection.add(headerPanel, BorderLayout.CENTER);
-
+        add(new Navbar().build(), BorderLayout.NORTH);
         mainContainer.add(topSection, BorderLayout.NORTH);
 
         // ===== CONTENT BODY =====
@@ -47,54 +47,6 @@ public class Workmenu extends JFrame {
         mainContainer.add(contentBody, BorderLayout.CENTER);
     }
 
-    private JPanel createHeader() {
-        JPanel header = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                GradientPaint gp = new GradientPaint(0, 0, new Color(255, 120, 120), getWidth(), 0,
-                        new Color(255, 200, 150));
-                g2.setPaint(gp);
-                g2.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
-        header.setPreferredSize(new Dimension(1200, 80));
-        header.setBorder(new EmptyBorder(10, 30, 10, 30));
-
-        // Profile Section (Left)
-        JPanel profilePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-        profilePanel.setOpaque(false);
-
-        // Avatar (Round)
-        JPanel avatar = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
-                g2.fillOval(0, 0, getWidth(), getHeight());
-                // Draw placeholder icon
-                g2.setColor(Color.PINK);
-                g2.fillOval(5, 5, getWidth() - 10, getHeight() - 10);
-            }
-        };
-        avatar.setPreferredSize(new Dimension(50, 50));
-        avatar.setOpaque(false);
-
-        JLabel nameLabel = new JLabel("Elysia Athome");
-        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        nameLabel.setForeground(Color.WHITE);
-
-        profilePanel.add(avatar);
-        profilePanel.add(nameLabel);
-
-        header.add(profilePanel, BorderLayout.WEST);
-
-        return header;
-    }
 
     private JPanel createContentBody() {
         JPanel body = new JPanel(new GridBagLayout());
@@ -139,21 +91,14 @@ public class Workmenu extends JFrame {
         listPanel.setOpaque(false);
 
         // Add multiple job history items to demonstrate scrolling
-        listPanel.add(createJobHistoryCard("กำลังทำ", new Color(255, 160, 122)));
+        listPanel.add(createJobHistoryCard("กำลังทำ","Tsuna", new Color(255, 160, 122)));
         listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("สำเร็จ", new Color(50, 205, 50)));
+        listPanel.add(createJobHistoryCard("สำเร็จ","minecraft", new Color(50, 205, 50)));
         listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("สำเร็จ", new Color(50, 205, 50)));
+        listPanel.add(createJobHistoryCard("สำเร็จ","Golop", new Color(50, 205, 50)));
         listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("กำลังทำ", new Color(255, 160, 122)));
-        listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("สำเร็จ", new Color(50, 205, 50)));
-        listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("ยกเลิก", new Color(220, 20, 60)));
-        listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("สำเร็จ", new Color(50, 205, 50)));
-        listPanel.add(Box.createVerticalStrut(15));
-        listPanel.add(createJobHistoryCard("กำลังทำ", new Color(255, 160, 122)));
+        listPanel.add(createJobHistoryCard("กำลังทำ","Fakaka", new Color(255, 160, 122)));
+
 
         JScrollPane scrollPane = new JScrollPane(listPanel);
         scrollPane.setBorder(null);
@@ -275,6 +220,12 @@ public class Workmenu extends JFrame {
         editBtn.setBackground(Color.WHITE);
         editBtn.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
         editBtn.setPreferredSize(new Dimension(80, 30));
+
+        editBtn.addActionListener(e -> {
+            Editperson dialog = new Editperson(Workmenu.this);
+            dialog.setVisible(true);
+        });
+
         JPanel btnPanel = new JPanel();
         btnPanel.setOpaque(false);
         btnPanel.add(editBtn);
@@ -292,7 +243,7 @@ public class Workmenu extends JFrame {
 
     // --- Helper Components ---
 
-    private JPanel createJobHistoryCard(String statusText, Color statusColor) {
+    private JPanel createJobHistoryCard(String statusText,String titleName, Color statusColor) {
         JPanel card = new RoundedPanel(15, Color.WHITE, Color.WHITE);
         card.setLayout(new BorderLayout(10, 0));
         card.setBorder(new EmptyBorder(10, 10, 10, 10));
@@ -309,7 +260,7 @@ public class Workmenu extends JFrame {
         JPanel textPanel = new JPanel(new GridLayout(2, 1));
         textPanel.setOpaque(false);
 
-        JLabel title = new JLabel("<html><b>กิจกรรมอบรม</b><br>ในโครงการ KNOCK KNOCK</html>");
+        JLabel title = new JLabel("<html><b>"+titleName+"</b><br></html>");
         title.setFont(new Font("SansSerif", Font.PLAIN, 12));
         textPanel.add(title);
 
