@@ -104,16 +104,6 @@ public class Screen extends JFrame {
             String user = txtUser.getText().trim();
             String pass = new String(txtPass.getPassword());
 
-            boolean ok = Auth.login(user, pass);
-            if (ok) {
-                JOptionPane.showMessageDialog(this, "Login Success!");
-
-
-                new Profile().setVisible(true);
-                this.dispose();
-            } else {
-                JOptionPane.showMessageDialog(this, "Invalid username or password!");
-            }
         });
         
         right.add(btn, g2);

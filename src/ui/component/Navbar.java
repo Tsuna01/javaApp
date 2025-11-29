@@ -1,60 +1,134 @@
 package ui.component;
 
-import util.RoundedButton;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 
 public class Navbar {
 
-    private static final Color HEADER_LEFT = new Color(255, 174, 201);
-    private static final Color HEADER_RIGHT = new Color(255, 214, 165);
-
-    public Navbar() {}
+    public Navbar() {
+    }
 
     public JPanel build() {
-        JPanel header = new JPanel() {
+        return createHeader();
+    }
+
+    private JPanel createHeader() {
+        JPanel header = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
-
-                GradientPaint gp = new GradientPaint(
-                        0, 0, HEADER_LEFT,
-                        getWidth(), 0, HEADER_RIGHT
-                );
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // Gradient Pink to Orange
+                GradientPaint gp = new GradientPaint(0, 0, new Color(255, 130, 140), getWidth(), 0,
+                        new Color(255, 210, 160));
                 g2.setPaint(gp);
                 g2.fillRect(0, 0, getWidth(), getHeight());
             }
         };
+        header.setPreferredSize(new Dimension(1200, 80));
+        header.setBorder(new EmptyBorder(0, 50, 0, 50));
 
-        header.setPreferredSize(new Dimension(0, 65));
-        header.setLayout(new BorderLayout());
-        header.setBorder(new EmptyBorder(0, 25, 0, 25));
+        // Left: Avatar + Name
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
+        left.setOpaque(false);
 
-        JLabel title = new JLabel("Elysia Athome");
-        title.setFont(new Font("SansSerif", Font.BOLD, 20));
-        title.setForeground(Color.WHITE);
+        JLabel avatar = new JLabel(new ImageIcon(createPlaceholderImage(50, Color.WHITE))); // Placeholder
+        JLabel name = new JLabel("Elysia Athome");
+        name.setFont(new Font("SansSerif", Font.BOLD, 20));
+        name.setForeground(Color.WHITE);
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
+        left.add(avatar);
+        left.add(name);
+
+        // Right: Beautiful Buttons
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 20));
         right.setOpaque(false);
 
-        // =============== MENU BUTTONS ===============
-        RoundedButton btnAvailable = new RoundedButton("Available Job");
-        RoundedButton btnMyJob     = new RoundedButton("My Job");
-        RoundedButton btnLogout    = new RoundedButton("Logout");
+        JButton btn1 = createNavButton("Available Job");
+        JButton btn2 = createNavButton("My Job");
 
-        btnAvailable.setRadius(15);
-        btnMyJob.setRadius(15);
-        btnLogout.setRadius(15);
+        right.add(btn1);
+        right.add(btn2);
 
-        right.add(btnAvailable);
-        right.add(btnMyJob);
-        right.add(btnLogout);
-
-        header.add(title, BorderLayout.WEST);
+        header.add(left, BorderLayout.WEST);
         header.add(right, BorderLayout.EAST);
 
         return header;
+    }
+
+    // Create beautiful navigation buttons with modern styling
+    private JButton createNavButton(String text) {
+        JButton btn = new JButton(text) {
+            private boolean hovered = false;
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Background with glassmorphism effect
+                if (hovered) {
+                    // Hover state - white with slight transparency
+                    g2.setColor(new Color(255, 255, 255, 230));
+                } else {
+                    // Normal state - semi-transparent white
+                    g2.setColor(new Color(255, 255, 255, 180));
+                }
+
+                // Draw rounded rectangle
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
+
+                // Add subtle shadow/border effect
+                if (!hovered) {
+                    g2.setColor(new Color(255, 255, 255, 100));
+                    g2.setStroke(new BasicStroke(1.5f));
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 25, 25);
+                }
+
+                g2.dispose();
+
+                // Draw text
+                super.paintComponent(g);
+            }
+        };
+
+        btn.setText(text);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 15));
+        btn.setForeground(new Color(80, 80, 80)); // Dark gray initial color
+        btn.setPreferredSize(new Dimension(140, 40));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect with smooth color transition
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                btn.setForeground(new Color(255, 100, 120)); // Pink color on hover
+                btn.repaint();
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                btn.setForeground(new Color(80, 80, 80)); // Dark gray normal
+                btn.repaint();
+            }
+        });
+
+        return btn;
+    }
+
+    public Image createPlaceholderImage(int size, Color color) {
+        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = img.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(color);
+        g2.fillOval(0, 0, size, size);
+        g2.dispose();
+        return img;
     }
 }

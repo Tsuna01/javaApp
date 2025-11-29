@@ -47,10 +47,10 @@ public class WrapLayout extends FlowLayout {
             Insets insets = target.getInsets();
             int x = 0, y = insets.top;
             int rowHeight = 0;
-            Dimension dim = new Dimension(0, 0);
 
             for (Component comp : target.getComponents()) {
-                if (!comp.isVisible()) continue;
+                if (!comp.isVisible())
+                    continue;
 
                 Dimension d = preferred ? comp.getPreferredSize() : comp.getMinimumSize();
                 if (x + d.width > maxWidth) {
@@ -59,7 +59,8 @@ public class WrapLayout extends FlowLayout {
                     rowHeight = 0;
                 }
 
-                if (x > 0) x += hgap;
+                if (x > 0)
+                    x += hgap;
                 x += d.width;
                 rowHeight = Math.max(rowHeight, d.height);
             }
