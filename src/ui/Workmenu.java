@@ -100,6 +100,8 @@ public class Workmenu extends JFrame {
         listPanel.add(createJobHistoryCard("กำลังทำ","Fakaka", new Color(255, 160, 122)));
 
 
+
+
         JScrollPane scrollPane = new JScrollPane(listPanel);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
@@ -210,7 +212,7 @@ public class Workmenu extends JFrame {
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
         listPanel.setOpaque(false);
 
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 5; i++) {
             listPanel.add(createWorkerItem());
             listPanel.add(Box.createVerticalStrut(10));
         }

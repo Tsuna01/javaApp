@@ -11,8 +11,8 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 
-public class Screen extends JFrame {
-    public Screen() {
+public class Login extends JFrame {
+    public Login() {
         setTitle("Myapp");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(900, 540);
@@ -147,6 +147,6 @@ public class Screen extends JFrame {
 
     // ---- main สำหรับรันทดสอบ ----
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Screen().setVisible(true));
+        SwingUtilities.invokeLater(() -> new Login().setVisible(true));
     }
 }

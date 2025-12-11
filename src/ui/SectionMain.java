@@ -2,9 +2,7 @@ package ui;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 
 import ui.component.Navbar;
@@ -14,7 +12,6 @@ public class SectionMain extends JFrame {
     private static final Color BG_COLOR = new Color(240, 240, 240);
 
     // Fonts
-    private static final Font FONT_HEADER_LINK = new Font("SansSerif", Font.BOLD, 14);
     private static final Font FONT_TITLE = new Font("SansSerif", Font.PLAIN, 28);
     private static final Font FONT_CARD_TITLE = new Font("Tahoma", Font.BOLD, 18);
     private static final Font FONT_CARD_TEXT = new Font("Tahoma", Font.PLAIN, 14);
@@ -52,72 +49,6 @@ public class SectionMain extends JFrame {
         content.add(createJobGrid(), BorderLayout.CENTER);
 
         mainPanel.add(content, BorderLayout.CENTER);
-    }
-
-    // ========= HEADER ==========
-    private JPanel createHeader() {
-        JPanel header = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                GradientPaint gp = new GradientPaint(0, 0, new Color(255, 130, 140), getWidth(), 0,
-                        new Color(255, 210, 160));
-                g2.setPaint(gp);
-                g2.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
-        header.setPreferredSize(new Dimension(1200, 80));
-        header.setBorder(new EmptyBorder(0, 50, 0, 50));
-
-        // Left: Avatar + Name
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
-        left.setOpaque(false);
-
-        JLabel avatar = new JLabel(new ImageIcon(createPlaceholderImage(50, Color.WHITE)));
-        JLabel name = new JLabel("Elysia Athome");
-        name.setFont(new Font("SansSerif", Font.BOLD, 20));
-        name.setForeground(Color.WHITE);
-
-        left.add(avatar);
-        left.add(name);
-
-        // Right: Links
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 30, 20));
-        right.setOpaque(false);
-
-        // Available Job Button (Active style)
-        JButton availableJobBtn = new JButton("Available Job") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 50)); // Semi-transparent white
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.setColor(Color.WHITE);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
-                super.paintComponent(g2);
-                g2.dispose();
-            }
-        };
-        availableJobBtn.setFont(FONT_HEADER_LINK);
-        availableJobBtn.setForeground(Color.WHITE);
-        availableJobBtn.setContentAreaFilled(false);
-        availableJobBtn.setBorderPainted(false);
-        availableJobBtn.setPreferredSize(new Dimension(120, 40));
-
-        JLabel myJobLink = new JLabel("My Job");
-        myJobLink.setFont(FONT_HEADER_LINK);
-        myJobLink.setForeground(Color.WHITE);
-
-        right.add(availableJobBtn);
-        right.add(myJobLink);
-
-        header.add(left, BorderLayout.WEST);
-        header.add(right, BorderLayout.EAST);
-
-        return header;
     }
 
     // ========= TITLE & SEARCH ==========
@@ -158,6 +89,7 @@ public class SectionMain extends JFrame {
 
         return panel;
     }
+
     // ========= JOB GRID ==========
     private JScrollPane createJobGrid() {
         JPanel grid = new JPanel(new GridLayout(0, 2, 30, 30)); // 2 Columns
@@ -300,27 +232,6 @@ public class SectionMain extends JFrame {
         g2.fillRect(0, 0, size, size);
         g2.dispose();
         return img;
-    }
-
-    private static class RoundedBorder extends LineBorder {
-        private int radius;
-
-        public RoundedBorder(int radius) {
-            super(Color.BLACK, 1, true);
-            this.radius = radius;
-        }
-
-        public Shape getShape(int x, int y, int w, int h) {
-            return new RoundRectangle2D.Float(x, y, w, h, radius, radius);
-        }
-
-        @Override
-        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(lineColor);
-            g2.draw(getShape(x, y, width - 1, height - 1));
-        }
     }
 
     public static void main(String[] args) {

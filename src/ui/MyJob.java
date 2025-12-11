@@ -150,7 +150,6 @@ public class MyJob extends JFrame {
         title.setFont(FONT_CARD_TITLE);
 
         // Status label with color
-        Color statusColor = isCompleted ? new Color(76, 175, 80) : new Color(255, 152, 0);
         JLabel statusLabel = new JLabel("<html>Status : <font color='" +
                 (isCompleted ? "#4CAF50" : "#FF9800") + "'>" + status + "</font></html>");
         statusLabel.setFont(FONT_CARD_STATUS);

@@ -211,6 +211,7 @@ public class AddEvent extends JFrame {
 
         JButton acceptBtn = new JButton("Accept");
         acceptBtn.setPreferredSize(new Dimension(80, 25));
+
         styleButton(acceptBtn, new Color(255, 153, 153), Color.WHITE);
 
         buttonPanel.add(detailBtn);
