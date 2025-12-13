@@ -5,11 +5,17 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
+import service.Auth;
+import service.User;
 import ui.component.Navbar;
 
 public class Profile extends JFrame {
 
     private static final Color BG_COLOR = new Color(240, 240, 240); // Light gray background
+
+    public String nameUser = Auth.getAuthUser().getName();
+    public String statusUser = Auth.getAuthUser().getStatus();
+    public String txtStatusUser;
 
     // Fonts
     private static final Font FONT_NAME = new Font("SansSerif", Font.BOLD, 28);
@@ -28,6 +34,7 @@ public class Profile extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
+
 
         // Main Container
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -51,8 +58,7 @@ public class Profile extends JFrame {
         JButton backBtn = createBackButton();
         backBtn.addActionListener(e -> {
             dispose();
-            // new SectionMain().setVisible(true); // Uncomment if SectionMain exists and is
-            // the target
+
         });
         topBar.add(backBtn);
 
@@ -64,6 +70,7 @@ public class Profile extends JFrame {
 
     // ========= PROFILE CARD ==========
     private JPanel createProfileCard() {
+
         JPanel card = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -110,15 +117,21 @@ public class Profile extends JFrame {
         // Name Row
         JPanel nameRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         nameRow.setOpaque(false);
-        JLabel nameLbl = new JLabel("Elysia Athome");
+        JLabel nameLbl = new JLabel(nameUser);
         nameLbl.setFont(FONT_NAME);
         nameRow.add(nameLbl);
 
         // Spacer
         nameRow.add(Box.createHorizontalStrut(50));
 
+        if(statusUser.equals("admin")){
+            txtStatusUser = "ผู้ดูแลระบบ";
+        }else {
+            txtStatusUser = "นักศึกษา";
+        }
+
         // Status
-        JLabel statusLbl = new JLabel("สถานะ : นักศึกษา");
+        JLabel statusLbl = new JLabel("สถานะ : "+txtStatusUser);
         statusLbl.setFont(FONT_THAI);
         nameRow.add(statusLbl);
 

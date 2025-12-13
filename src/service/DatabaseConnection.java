@@ -6,7 +6,7 @@ import java.sql.SQLException;
 public class DatabaseConnection {
     private static final String URL = "jdbc:mysql://localhost:3306/volunteer_db";
     private static final String USER = "root";
-    private static final String PASS = "123456"; // XAMPP ปกติว่างไว้ ถ้ามีรหัสให้ใส่
+    private static final String PASS = "123456";
 
     // โหลด Driver แค่ครั้งเดียว
     static {

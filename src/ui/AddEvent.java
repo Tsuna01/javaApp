@@ -152,6 +152,8 @@ public class AddEvent extends JFrame {
         timeSpinner.setEditor(timeEditor);
         timeSpinner.setBounds(260, 130, 75, 25);
         panel.add(timeSpinner);
+
+        System.out.println(timeSpinner.getValue());
         timeField = timeEditor.getTextField();
 
         // Location

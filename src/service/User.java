@@ -7,6 +7,7 @@ public abstract class User {
     private String email;
     private String password;
     private String status;
+    private String std_id;
 
 
     public User(int id, String name, String email, String password) {
@@ -61,9 +62,10 @@ public abstract class User {
         this.status = status;
     }
 
+
     // --- Helper Method ---
 
-    // เพิ่ม toString เพื่อให้ Debug ง่ายขึ้น (แต่ซ่อน Password ไว้)
+
     @Override
     public String toString() {
         return "User{" +

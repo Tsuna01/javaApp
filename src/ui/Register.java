@@ -159,9 +159,10 @@ public class Register extends JFrame {
                 return;
             }
 
+            // --- แก้ไขตรงนี้: ส่งข้อมูลไปหน้า RegisterStd ---
             dispose();
-            SwingUtilities.invokeLater(() -> new RegisterStd().setVisible(true));
-
+            // ส่ง name, email, password ไปด้วย
+            SwingUtilities.invokeLater(() -> new RegisterStd(name, email, password).setVisible(true));
         });
 
         right.add(btnRegister, g2);

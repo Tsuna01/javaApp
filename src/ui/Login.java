@@ -1,9 +1,9 @@
 package ui;
 
+import service.Auth;
 import util.ImageUtils;
 import util.RoundedLineBorder;
 import util.RoundedPanel;
-
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -65,7 +65,7 @@ public class Login extends JFrame {
 
         // Username label
         g2.gridy = 1;
-        JLabel userLabel = new JLabel("Username");
+        JLabel userLabel = new JLabel("Email");
         userLabel.setForeground(new Color(71, 85, 105)); // slate-600
         right.add(userLabel, g2);
 
@@ -101,8 +101,19 @@ public class Login extends JFrame {
         btn.setPreferredSize(new Dimension(0, 44));
 
         btn.addActionListener(e -> {
-            String user = txtUser.getText().trim();
+            String email = txtUser.getText().trim();
             String pass = new String(txtPass.getPassword());
+
+            // เรียกใช้ Auth
+            if (Auth.login(email, pass)) {
+                JOptionPane.showMessageDialog(this, "ยินดีต้อนรับ " + Auth.getAuthUser().getName());
+
+                // เปิดหน้าหลัก
+                new Profile().setVisible(true);
+                this.dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+            }
 
         });
         
@@ -116,6 +127,13 @@ public class Login extends JFrame {
         JLabel forgot = new JLabel("<html><u> Sign up now </u></html>");
         forgot.setForeground(new Color(37, 99, 235)); // blue-600
         forgot.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        forgot.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                new Register().setVisible(true);
+                dispose();
+            }
+        });
         opts.add(member, BorderLayout.WEST);
         opts.add(forgot, BorderLayout.EAST);
         right.add(opts, g2);

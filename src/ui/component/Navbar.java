@@ -1,5 +1,8 @@
 package ui.component;
 
+import service.Auth;
+import ui.*;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -8,6 +11,7 @@ import java.awt.image.BufferedImage;
 public class Navbar {
 
     public Navbar() {
+
     }
 
     public JPanel build() {
@@ -15,6 +19,8 @@ public class Navbar {
     }
 
     private JPanel createHeader() {
+        String nameUser = Auth.getAuthUser().getName();
+
         JPanel header = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -36,7 +42,7 @@ public class Navbar {
         left.setOpaque(false);
 
         JLabel avatar = new JLabel(new ImageIcon(createPlaceholderImage(50, Color.WHITE))); // Placeholder
-        JLabel name = new JLabel("Elysia Athome");
+        JLabel name = new JLabel(nameUser);
         name.setFont(new Font("SansSerif", Font.BOLD, 20));
         name.setForeground(Color.WHITE);
 
@@ -47,14 +53,54 @@ public class Navbar {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 20));
         right.setOpaque(false);
 
-        JButton btn1 = createNavButton("Available Job");
-        JButton btn2 = createNavButton("My Job");
-
-        if(btn2.getText() == "My Job"){
-            btn2.addActionListener(e -> {
-
-            });
+        //btn Navbar
+        String addEnvent = Auth.getAuthUser().getStatus();
+        String txtBTN;
+        String txtBTN2;
+        if(addEnvent.equals("admin")){ // *ควรใช้ .equals() ในการเปรียบเทียบ String*
+            txtBTN = "Add Event";
+            txtBTN2 = "My Job";
+        }else {
+            txtBTN = "Available Job";
+            txtBTN2 = "My Job";
         }
+
+        JButton btn1 = createNavButton(txtBTN);
+        JButton btn2 = createNavButton(txtBTN2);
+        btn1.addActionListener(e -> {
+
+            if (btn1.getText().equals("Add Event")) {
+
+                new AddEvent().setVisible(true);
+                Window window = SwingUtilities.getWindowAncestor(btn1);
+                if (window != null) {
+                    window.dispose();
+                }
+            } else if (btn1.getText().equals("Available Job")) {
+                new AvailableJob().setVisible(true);
+                Window window = SwingUtilities.getWindowAncestor(btn1);
+                if (window != null) {
+                    window.dispose();
+                }
+            }
+        });
+
+        btn2.addActionListener(e -> {
+            if (Auth.getAuthUser().getStatus().equalsIgnoreCase("admin")) {
+
+                new Workmenu().setVisible(true);
+                Window window = SwingUtilities.getWindowAncestor(btn1);
+                if (window != null) {
+                    window.dispose();
+                }
+            } else if (Auth.getAuthUser().getStatus().equalsIgnoreCase("student")) {
+                new MyJob().setVisible(true);
+                Window window = SwingUtilities.getWindowAncestor(btn1);
+                if (window != null) {
+                    window.dispose();
+                }
+            }
+        });
 
         right.add(btn1);
         right.add(btn2);

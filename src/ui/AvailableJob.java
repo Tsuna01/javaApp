@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 
 import ui.component.Navbar;
 
-public class SectionMain extends JFrame {
+public class AvailableJob extends JFrame {
 
     private static final Color BG_COLOR = new Color(240, 240, 240);
 
@@ -18,7 +18,7 @@ public class SectionMain extends JFrame {
     private static final Font FONT_CARD_WARN = new Font("Tahoma", Font.BOLD, 14);
     private static final Font FONT_BTN = new Font("SansSerif", Font.BOLD, 14);
 
-    public SectionMain() {
+    public AvailableJob() {
         initialize();
     }
 
@@ -57,7 +57,7 @@ public class SectionMain extends JFrame {
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
-        JLabel title = new JLabel("My Job");
+        JLabel title = new JLabel("Available Job");
         title.setFont(FONT_TITLE);
 
         // Search Bar with Filter Icon
@@ -196,6 +196,10 @@ public class SectionMain extends JFrame {
         detailsBtn.setContentAreaFilled(false);
         detailsBtn.setBorderPainted(false);
         detailsBtn.setPreferredSize(new Dimension(100, 35));
+        detailsBtn.addActionListener(e -> {
+            new DetailJob().setVisible(true);
+            dispose();
+        });
 
         JButton acceptBtn = new JButton("Accept Job") {
             @Override
@@ -236,7 +240,7 @@ public class SectionMain extends JFrame {
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
-            SectionMain s = new SectionMain();
+            AvailableJob s = new AvailableJob();
             s.setVisible(true);
         });
     }

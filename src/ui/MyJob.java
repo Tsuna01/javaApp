@@ -185,6 +185,9 @@ public class MyJob extends JFrame {
         detailsBtn.setBorderPainted(false);
         detailsBtn.setPreferredSize(new Dimension(100, 35));
         detailsBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        detailsBtn.addActionListener(e -> {
+
+        });
 
         btnPanel.add(detailsBtn);
 
