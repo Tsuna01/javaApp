@@ -4,7 +4,9 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
+import service.API;
 import ui.component.Navbar;
 
 public class AvailableJob extends JFrame {
@@ -13,17 +15,17 @@ public class AvailableJob extends JFrame {
 
     // Fonts
     private static final Font FONT_TITLE = new Font("SansSerif", Font.PLAIN, 28);
-    private static final Font FONT_CARD_TITLE = new Font("Tahoma", Font.BOLD, 18);
-    private static final Font FONT_CARD_TEXT = new Font("Tahoma", Font.PLAIN, 14);
-    private static final Font FONT_CARD_WARN = new Font("Tahoma", Font.BOLD, 14);
-    private static final Font FONT_BTN = new Font("SansSerif", Font.BOLD, 14);
+    private static final Font FONT_CARD_TITLE = new Font("Tahoma", Font.BOLD, 16);
+    private static final Font FONT_CARD_TEXT = new Font("Tahoma", Font.PLAIN, 12);
+    private static final Font FONT_CARD_WARN = new Font("Tahoma", Font.BOLD, 12);
+    private static final Font FONT_BTN = new Font("SansSerif", Font.BOLD, 13);
 
     public AvailableJob() {
         initialize();
     }
 
     private void initialize() {
-        setTitle("Main");
+        setTitle("Available Job");
         setSize(1200, 800);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -45,7 +47,7 @@ public class AvailableJob extends JFrame {
         // Title & Search
         content.add(createTitleSection(), BorderLayout.NORTH);
 
-        // Job Grid
+        // Job Grid (โหลดจาก DB แล้วแสดงจริง)
         content.add(createJobGrid(), BorderLayout.CENTER);
 
         mainPanel.add(content, BorderLayout.CENTER);
@@ -60,10 +62,9 @@ public class AvailableJob extends JFrame {
         JLabel title = new JLabel("Available Job");
         title.setFont(FONT_TITLE);
 
-        // Search Bar with Filter Icon
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.setOpaque(false);
-        searchPanel.setPreferredSize(new Dimension(200, 40));
+        searchPanel.setPreferredSize(new Dimension(220, 40));
 
         JTextField searchField = new JTextField("  Search") {
             @Override
@@ -79,7 +80,7 @@ public class AvailableJob extends JFrame {
             }
         };
         searchField.setOpaque(false);
-        searchField.setBorder(new MyJob.RoundedBorder(25));
+        searchField.setBorder(new MyJob.RoundedBorder(25)); // ต้องมี class MyJob.RoundedBorder ในโปรเจกต์
         searchField.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -96,9 +97,19 @@ public class AvailableJob extends JFrame {
         grid.setOpaque(false);
         grid.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // Add 4 Job Cards
-        for (int i = 0; i < 4; i++) {
-            grid.add(createJobCard());
+        // ===== โหลดงานจาก DB =====
+        ArrayList<API> jobs = API.getJobs();
+
+        if (jobs == null || jobs.isEmpty()) {
+            JLabel empty = new JLabel("ไม่มีงานให้แสดง (No Jobs Found)");
+            empty.setFont(FONT_CARD_WARN);
+            empty.setForeground(Color.DARK_GRAY);
+            grid.add(empty);
+        } else {
+            for (API work : jobs) {
+                // ส่ง object work เข้าไปสร้างการ์ด
+                grid.add(createJobCard(work));
+            }
         }
 
         JScrollPane scroll = new JScrollPane(grid);
@@ -111,122 +122,130 @@ public class AvailableJob extends JFrame {
     }
 
     // ========= JOB CARD ==========
-    private JPanel createJobCard() {
-        JPanel card = new JPanel(new BorderLayout(20, 0)) {
+    // แก้ไขให้รับ parameter API work
+    private JPanel createJobCard(API work) {
+        JPanel card = new JPanel(new BorderLayout(15, 0)) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
                 // Shadow
-                g2.setColor(new Color(0, 0, 0, 20));
-                g2.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, 30, 30);
-
+                g2.setColor(new Color(0, 0, 0, 15));
+                g2.fillRoundRect(4, 4, getWidth() - 8, getHeight() - 8, 20, 20);
                 // BG
                 g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, getWidth() - 10, getHeight() - 10, 30, 30);
+                g2.fillRoundRect(0, 0, getWidth() - 8, getHeight() - 8, 20, 20);
             }
         };
         card.setOpaque(false);
-        card.setBorder(new EmptyBorder(25, 25, 25, 25));
-        card.setPreferredSize(new Dimension(500, 280));
+        card.setBorder(new EmptyBorder(18, 20, 18, 20));
+        card.setPreferredSize(new Dimension(500, 200));
 
-        // Left: Image
-        JLabel image = new JLabel(new ImageIcon(createPlaceholderImage(120, new Color(139, 69, 19)))); // Brown
-                                                                                                       // placeholder
-        image.setPreferredSize(new Dimension(130, 180));
+        // --- 1. Left: Image ---
+        // ใช้สีส้มน้ำตาลเป็น Placeholder
+        JLabel image = new JLabel(new ImageIcon(createPlaceholderImage(100, new Color(139, 69, 19))));
         image.setVerticalAlignment(SwingConstants.TOP);
-
         card.add(image, BorderLayout.WEST);
 
-        // Center: Details
+        // --- 2. Center: Details ---
         JPanel details = new JPanel();
         details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
         details.setOpaque(false);
 
-        JLabel title = new JLabel("<html>กิจกรรมอบรม ในโครงการ<br>KNOCK KNOCK</html>");
+        // ดึงข้อมูลจริงจาก Object API work
+        String titleText = safe(work.title);
+        String locationText = safe(work.location);
+        String typeText = safe(work.jobType);
+
+        // แยกวันที่และเวลา
+        String[] dateParts = splitDateTime(work.dateTime);
+        String dateStr = dateParts[0];
+        String timeStr = (dateParts.length > 1) ? dateParts[1] : "";
+
+        // Title Label
+        JLabel title = new JLabel("<html>" + titleText + "</html>");
         title.setFont(FONT_CARD_TITLE);
 
-        JLabel date = new JLabel(
-                "<html><font color='#FFD700'>☀</font> วันอังคารที่ 20 พฤษภาคม 2568<br>&nbsp;&nbsp;&nbsp;เวลา 16:00-20:00 น.</html>");
+        // Date Label
+        JLabel date = new JLabel("<html><font color='#FFD700'>☀</font> วันที่: " + dateStr
+                + "<br>&nbsp;&nbsp;&nbsp;เวลา: " + timeStr + "</html>");
         date.setFont(FONT_CARD_TEXT);
 
-        JLabel loc = new JLabel("<html><font color='red'>📍</font> ณ อาคารเรียนรวม 1 ห้อง B3102</html>");
+        // Location Label
+        JLabel loc = new JLabel("<html><font color='red'>📍</font> " + locationText + "</html>");
         loc.setFont(FONT_CARD_TEXT);
 
-        JLabel warning = new JLabel("<html><font color='red'>🚨 พิเศษรับชั่วโมงชดใช้สังคม 20 ชม.!!</font></html>");
+        // Warning / Special Label
+        JLabel warning = new JLabel("<html><font color='red'>🚨 รับ: " + work.vacancies + " อัตรา</font></html>");
         warning.setFont(FONT_CARD_WARN);
 
-        JLabel hours = new JLabel("<html>🔘 จิตอาสา 5 ชั่วโมง</html>");
+        // Hours / Type Label
+        JLabel hours = new JLabel("<html>🔘 ประเภท: " + typeText + " (" + work.workingHours + " ชม.)</html>");
         hours.setFont(FONT_CARD_TEXT);
 
         details.add(title);
-        details.add(Box.createVerticalStrut(10));
+        details.add(Box.createVerticalStrut(6));
         details.add(date);
-        details.add(Box.createVerticalStrut(5));
+        details.add(Box.createVerticalStrut(3));
         details.add(loc);
-        details.add(Box.createVerticalStrut(5));
+        details.add(Box.createVerticalStrut(3));
         details.add(warning);
-        details.add(Box.createVerticalStrut(5));
+        details.add(Box.createVerticalStrut(3));
         details.add(hours);
 
         card.add(details, BorderLayout.CENTER);
 
-        // Bottom: Buttons
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        // --- 3. Bottom: Buttons ---
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
-        btnPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        btnPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        JButton detailsBtn = new JButton("Details") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
-                g2.setColor(Color.BLACK);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
-                super.paintComponent(g2);
-                g2.dispose();
-            }
-        };
-        detailsBtn.setFont(FONT_BTN);
-        detailsBtn.setForeground(Color.BLACK);
-        detailsBtn.setContentAreaFilled(false);
-        detailsBtn.setBorderPainted(false);
-        detailsBtn.setPreferredSize(new Dimension(100, 35));
+        JButton detailsBtn = createRoundedButton("Details", Color.BLACK, Color.WHITE, false);
         detailsBtn.addActionListener(e -> {
-            new DetailJob().setVisible(true);
+            String detailID = work.jobId;
+            SwingUtilities.invokeLater(() -> new DetailJob(detailID).setVisible(true));
             dispose();
         });
 
-        JButton acceptBtn = new JButton("Accept Job") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 160, 122)); // Salmon/Orange color
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
-                super.paintComponent(g2);
-                g2.dispose();
-            }
-        };
-        acceptBtn.setFont(FONT_BTN);
-        acceptBtn.setForeground(Color.WHITE);
-        acceptBtn.setContentAreaFilled(false);
-        acceptBtn.setBorderPainted(false);
-        acceptBtn.setPreferredSize(new Dimension(120, 35));
+        JButton acceptBtn = createRoundedButton("Accept Job", Color.WHITE, new Color(255, 160, 122), true);
 
         btnPanel.add(detailsBtn);
         btnPanel.add(acceptBtn);
-
         card.add(btnPanel, BorderLayout.SOUTH);
 
         return card;
     }
 
     // ========= HELPERS ==========
+
+    // แยก method สร้างปุ่มออกมาเพื่อให้โค้ดอ่านง่ายขึ้น
+    private JButton createRoundedButton(String text, Color fgColor, Color bgColor, boolean filled) {
+        JButton btn = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (filled) {
+                    g2.setColor(bgColor);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                } else {
+                    g2.setColor(bgColor); // พื้นหลังปุ่ม
+                    g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
+                    g2.setColor(fgColor); // ขอบ
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
+                }
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
+        btn.setFont(FONT_BTN);
+        btn.setForeground(fgColor);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setPreferredSize(new Dimension(110, 32));
+        return btn;
+    }
 
     private Image createPlaceholderImage(int size, Color color) {
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
@@ -236,6 +255,24 @@ public class AvailableJob extends JFrame {
         g2.fillRect(0, 0, size, size);
         g2.dispose();
         return img;
+    }
+
+    private String safe(String s) {
+        return (s == null) ? "" : s;
+    }
+
+    private String[] splitDateTime(String dateTime) {
+        if (dateTime == null || dateTime.trim().isEmpty()) {
+            return new String[] { "-", "-" };
+        }
+        // ตัด .0 ข้างหลังทิ้งก่อน (ถ้ามี)
+        if (dateTime.endsWith(".0")) {
+            dateTime = dateTime.substring(0, dateTime.length() - 2);
+        }
+        String[] parts = dateTime.trim().split("\\s+");
+        if (parts.length == 1)
+            return new String[] { parts[0], "" };
+        return new String[] { parts[0], parts[1] };
     }
 
     public static void main(String[] args) {

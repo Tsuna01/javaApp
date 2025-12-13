@@ -4,12 +4,15 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
+import service.API;
 import ui.component.Navbar;
 
 public class DetailJob extends JFrame {
 
     private static final Color BG_COLOR = new Color(240, 240, 240);
+    private String jobid;
 
     // Fonts
     private static final Font FONT_TITLE = new Font("Tahoma", Font.BOLD, 20);
@@ -18,7 +21,8 @@ public class DetailJob extends JFrame {
     private static final Font FONT_BTN = new Font("SansSerif", Font.BOLD, 16);
     private static final Font FONT_BACK = new Font("SansSerif", Font.PLAIN, 14);
 
-    public DetailJob() {
+    public DetailJob(String jobid) {
+        this.jobid = jobid;
         initialize();
     }
 
@@ -75,6 +79,10 @@ public class DetailJob extends JFrame {
         backBtn.setBorderPainted(false);
         backBtn.setPreferredSize(new Dimension(100, 35));
         backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backBtn.addActionListener(e -> {
+            new AvailableJob().setVisible(true);
+            dispose();
+        });
 
         panel.add(backBtn);
         return panel;
@@ -82,6 +90,8 @@ public class DetailJob extends JFrame {
 
     // ========= JOB DETAIL CARD ==========
     private JPanel createJobDetailCard() {
+        ArrayList<API> job = API.getJobDetail(jobid);
+        ArrayList<String> data = new ArrayList<>();
         JPanel cardContainer = new JPanel(new GridBagLayout());
         cardContainer.setOpaque(false);
 
@@ -120,38 +130,121 @@ public class DetailJob extends JFrame {
         JPanel details = new JPanel();
         details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
         details.setOpaque(false);
+        String workingHours= "";
+        String vacancies = "";
+        for(API i: job){
+            data.add(i.title);
+            data.add(i.dateTime);
+            data.add(i.location);
+            workingHours = String.valueOf(i.workingHours);
+            data.add(i.details);
+            vacancies = String.valueOf(i.vacancies);
+            data.add(i.jobType);
 
-        JLabel title = new JLabel("กิจกรรมอบรม ในโครงการ KNOCK KNOCK");
+        }
+
+
+        String dateD = data.get(1);
+        String[] dayD = dateD.split(" ");
+        String MM;
+
+        String[] dateParts = dayD[0].split("-");
+
+        String[] timeParts = dayD[1].split(":");
+
+        System.out.println("ปี: " + dateParts[0]);
+        System.out.println("เดือน: " + dateParts[1]);
+        System.out.println("วันที่: " + dateParts[2]);
+
+        System.out.println("ชั่วโมง: " + timeParts[0]);
+        System.out.println("นาที: " + timeParts[1]);
+
+        switch (dateParts[1]) {
+            case "1":
+            case "01":
+                MM = "มกราคม";
+                break;
+            case "2":
+            case "02":
+                MM = "กุมภาพันธ์";
+                break;
+            case "3":
+            case "03":
+                MM = "มีนาคม";
+                break;
+            case "4":
+            case "04":
+                MM = "เมษายน";
+                break;
+            case "5":
+            case "05":
+                MM = "พฤษภาคม";
+                break;
+            case "6":
+            case "06":
+                MM = "มิถุนายน";
+                break;
+            case "7":
+            case "07":
+                MM = "กรกฎาคม";
+                break;
+            case "8":
+            case "08":
+                MM = "สิงหาคม";
+                break;
+            case "9":
+            case "09":
+                MM = "กันยายน";
+                break;
+            case "10":
+                MM = "ตุลาคม";
+                break;
+            case "11":
+                MM = "พฤศจิกายน";
+                break;
+            case "12":
+                MM = "ธันวาคม";
+                break;
+            default:
+                MM = "ไม่ทราบเดือน";
+        }
+
+        String type = data.get(4);
+
+        if (type != null && type.equalsIgnoreCase("paid")) {
+            data.set(4, "งานมีค่าตอบแทน");
+        } else if (type != null && type.equalsIgnoreCase("volunteer")) {
+            data.set(4, "งานจิตอาสา");
+        } else {
+            data.set(4, "");
+        }
+
+
+        JLabel title = new JLabel(" " + data.get(0));
         title.setFont(FONT_TITLE);
 
-        JLabel organizer = new JLabel(
-                "<html><font color='#FF8C00'>👤</font> ผู้จัดงาน: เครือข่าย ข่าว ข้อมูล ชาว มอ. เข้าร่วมกิจกรรมอบรม ในโครงการ KNOCK KNOCK</html>");
-        organizer.setFont(FONT_TEXT);
-
         JLabel date = new JLabel(
-                "<html><font color='#FFD700'>☀</font> วันอังคารที่ 20 พฤษภาคม 2568<br>&nbsp;&nbsp;&nbsp;เวลา 16:00-20:00 น.</html>");
+                "<html><font color='#FFD700'>☀</font> วันที่: "
+                        + dateParts[2] + " " + MM + " " + dateParts[0]
+                        + "<br>&nbsp;&nbsp;&nbsp;เวลา "
+                        + timeParts[0] + ":" + timeParts[1] + " น.</html>"
+        );
         date.setFont(FONT_TEXT);
 
-        JLabel loc = new JLabel("<html><font color='red'>📍</font> ณ อาคารเรียนรวม 1 ห้อง B3102</html>");
+        JLabel loc = new JLabel("<html><font color='red'>📍</font> " + data.get(2) + "</html>");
         loc.setFont(FONT_TEXT);
 
-        JLabel warning = new JLabel("<html><font color='red'>🚨 พิเศษรับชั่วโมงชดใช้สังคม 20 ชม.!!</font></html>");
+        JLabel warning = new JLabel("<html><font color='red'>🚨 รับ: " + vacancies + " อัตรา</font></html>");
         warning.setFont(new Font("Tahoma", Font.BOLD, 14));
 
-        JLabel hours = new JLabel("<html>🔘 จิตอาสา 5 ชั่วโมง</html>");
+        JLabel hours = new JLabel("<html>🔘 ประเภท: " + data.get(4) + " (" + workingHours + " ชม.)</html>");
         hours.setFont(FONT_TEXT);
 
-        JLabel qrCode = new JLabel("<html>📱Scan QR code หรือคลิกลิงก์ https://forms.gle/KU28w4#w2jFSWy6</html>");
-        qrCode.setFont(FONT_TEXT);
+        JLabel detailsLabel = new JLabel("<html>" + data.get(3) + "</html>");
+        detailsLabel.setFont(FONT_TEXT);
 
-        JLabel hashtags = new JLabel(
-                "<html>#งาน #งานอดิเรก #สนุก #KNOCKKNOCK #ชาวมอนักศึกษา #ชื่นใจคอกใหม่ #ชื่นใจอาสา #ชื่นใจอบรม</html>");
-        hashtags.setFont(FONT_HASHTAG);
-        hashtags.setForeground(new Color(100, 100, 100));
-
+// ===== add ลง panel =====
         details.add(title);
-        details.add(Box.createVerticalStrut(15));
-        details.add(organizer);
         details.add(Box.createVerticalStrut(10));
         details.add(date);
         details.add(Box.createVerticalStrut(8));
@@ -161,9 +254,8 @@ public class DetailJob extends JFrame {
         details.add(Box.createVerticalStrut(8));
         details.add(hours);
         details.add(Box.createVerticalStrut(8));
-        details.add(qrCode);
-        details.add(Box.createVerticalStrut(15));
-        details.add(hashtags);
+        details.add(detailsLabel);
+
 
         rightPanel.add(details, BorderLayout.CENTER);
 
@@ -216,7 +308,7 @@ public class DetailJob extends JFrame {
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
-            DetailJob d = new DetailJob();
+            DetailJob d = new DetailJob("");
             d.setVisible(true);
         });
     }
