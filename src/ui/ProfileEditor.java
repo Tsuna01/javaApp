@@ -36,9 +36,6 @@ public class ProfileEditor extends JFrame {
         mainPanel.setBackground(BG_COLOR);
         add(mainPanel, BorderLayout.CENTER);
 
-        // ========= HEADER ==========
-        mainPanel.add(new Navbar().build(), BorderLayout.NORTH);
-
         // ========= BODY ==========
         JPanel body = new JPanel(new GridBagLayout()); // Center the card
         body.setOpaque(false);
@@ -183,8 +180,11 @@ public class ProfileEditor extends JFrame {
         footer.setBorder(new EmptyBorder(20, 0, 0, 0));
 
         JButton cancelBtn = createActionButton("Cancel", false);
-        JButton saveBtn = createActionButton("SAVE", true); // Should have icon
+        JButton saveBtn = createActionButton("SAVE", true);// Should have icon
 
+        cancelBtn.addActionListener(e -> {
+            dispose();
+        });
         footer.add(cancelBtn);
         footer.add(saveBtn);
 

@@ -9,6 +9,7 @@ public abstract class User {
     private String status;
     private String std_id;
 
+    abstract public void viewProfile();
 
     public User(int id, String name, String email, String password) {
         this.name = name;

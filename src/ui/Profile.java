@@ -6,6 +6,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 
 import service.Auth;
+import service.Student;
 import service.User;
 import ui.component.Navbar;
 
@@ -16,6 +17,9 @@ public class Profile extends JFrame {
     public String nameUser = Auth.getAuthUser().getName();
     public String statusUser = Auth.getAuthUser().getStatus();
     public String txtStatusUser;
+    public User user;
+    public String txtIdUser;
+    public String txtEmail = Auth.getAuthUser().getEmail();
 
     // Fonts
     private static final Font FONT_NAME = new Font("SansSerif", Font.BOLD, 28);
@@ -130,6 +134,15 @@ public class Profile extends JFrame {
             txtStatusUser = "นักศึกษา";
         }
 
+        if(statusUser.equals("admin")){
+            txtIdUser = String.valueOf(Auth.getAuthUser().getId());
+        }else {
+            Student s = (Student) Auth.getAuthUser();
+            txtIdUser = s.getStdId();
+        }
+
+
+
         // Status
         JLabel statusLbl = new JLabel("สถานะ : "+txtStatusUser);
         statusLbl.setFont(FONT_THAI);
@@ -139,17 +152,13 @@ public class Profile extends JFrame {
         infoPanel.add(Box.createVerticalStrut(10));
 
         // ID
-        JLabel idLbl = new JLabel("ID : S33550336");
+        JLabel idLbl = new JLabel("ID : "+txtIdUser);
         idLbl.setFont(FONT_ID);
-        // Underline effect can be done with HTML or custom painting, using HTML for
-        // simplicity
-        idLbl.setText("<html><u>ID : S33550336</u></html>");
         infoPanel.add(idLbl);
 
         // Email
-        JLabel emailLbl = new JLabel("Email : Cyrene.33550336@gmail.com");
+        JLabel emailLbl = new JLabel("Email : "+txtEmail);
         emailLbl.setFont(FONT_ID);
-        emailLbl.setText("<html><u>Email : Cyrene.33550336@gmail.com</u></html>");
         infoPanel.add(emailLbl);
 
         card.add(infoPanel, gbc);
@@ -209,6 +218,9 @@ public class Profile extends JFrame {
         gbc.anchor = GridBagConstraints.SOUTHEAST;
 
         JButton editBtn = createPillButton("Edit");
+        editBtn.addActionListener(e -> {
+            new ProfileEditor().setVisible(true);
+        });
         card.add(editBtn, gbc);
 
         return card;
@@ -275,6 +287,5 @@ public class Profile extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new Profile().setVisible(true));
     }
-
 
 }

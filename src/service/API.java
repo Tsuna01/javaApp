@@ -1,5 +1,8 @@
 package service;
 
+import model.JobAssignment;
+import model.JobAssignmentEntity;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,6 +20,8 @@ public class API {
     public String dateTime;
     public int vacancies;
     public String jobType;
+
+    public JobAssignment jobAssignment;
 
     // 2 ตัวนี้อาจจะต้องดึงแยก หรือปล่อยว่างไว้ก่อนถ้าในตาราง job ไม่มีคอลัมน์นี้ตรงๆ
     public ArrayList<String> applicants = new ArrayList<>();
@@ -37,7 +42,7 @@ public class API {
 
                 // 3. Map ข้อมูลจาก Database (ชื่อใน "..." ต้องตรงกับชื่อ column ใน DB)
 
-                job.jobId = rs.getString("jobid");
+                job.jobId = rs.getString("job_id");
                 job.title = rs.getString("title");
                 job.details = rs.getString("details");
                 job.location = rs.getString("location");
@@ -61,14 +66,10 @@ public class API {
         }
     }
 
-    public static boolean addJob(){
-        return true;
-    }
-
     public static ArrayList<API> getJobDetail(String jobid) {
         ArrayList<API> list = new ArrayList<>();
         // เช็คชื่อ column ดีๆ ว่าใน DB ชื่อ 'jobid', 'job_id' หรือ 'id'
-        String sql = "SELECT * FROM job WHERE jobid = ?";
+        String sql = "SELECT * FROM job WHERE job_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -79,7 +80,7 @@ public class API {
                 // ใช้ if เพราะเราคาดหวังผลลัพธ์แค่ 1 แถว (ค้นหาตาม ID)
                 if (rs.next()) {
                     API job = new API();
-                    job.jobId = String.valueOf(rs.getInt("jobid"));
+                    job.jobId = String.valueOf(rs.getInt("job_id"));
 
                     job.title = rs.getString("title");
                     job.details = rs.getString("details");
@@ -99,5 +100,44 @@ public class API {
         return list;
     }
 
+    // แก้ไข Return Type เป็น ArrayList<JobAssignment>
+    public static ArrayList<JobAssignment> getJobAssign() {
+        // สร้าง List ที่เก็บ JobAssignment
+        ArrayList<JobAssignment> list = new ArrayList<>();
+        String sql = "SELECT * FROM job_assignment";
 
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                // 1. สร้าง Object ของ JobAssignmentEntity (ไม่ใช่ API)
+                JobAssignmentEntity assign = new JobAssignmentEntity();
+
+                // 2. Map ข้อมูลโดยใช้ Setter (เพราะตัวแปรเป็น private)
+                // ต้องเช็ค Data Type ใน Database ให้ตรงกับ rs.get...()
+
+                assign.setAssignId(rs.getInt("assign_id"));     // int
+                assign.setJobId(rs.getInt("job_id"));           // int
+                assign.setStdId(rs.getString("std_id"));        // String
+                assign.setStatus(rs.getString("status"));       // String
+
+                // วันที่ใน DB มักเป็น Timestamp หรือ String
+                // ถ้าใน Entity ประกาศเป็น String ให้ใช้ getString
+                assign.setAssignAt(rs.getString("assign_at"));
+                assign.setFinishedAt(rs.getString("finished_at"));
+
+                assign.setRewardAmount(rs.getInt("reward_amount")); // int
+
+                // 3. เพิ่มลงใน List
+                list.add(assign);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // return list ออกไป (ไม่ต้องใช้ finally ก็ได้ในกรณีนี้)
+        return list;
+    }
 }
