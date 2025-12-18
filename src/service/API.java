@@ -2,6 +2,9 @@ package service;
 
 import model.JobAssignment;
 import model.JobAssignmentEntity;
+import model.Profiles;
+import model.ProfilesEntity;
+
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,12 +23,6 @@ public class API {
     public String dateTime;
     public int vacancies;
     public String jobType;
-
-    public JobAssignment jobAssignment;
-
-    // 2 ตัวนี้อาจจะต้องดึงแยก หรือปล่อยว่างไว้ก่อนถ้าในตาราง job ไม่มีคอลัมน์นี้ตรงๆ
-    public ArrayList<String> applicants = new ArrayList<>();
-    public ArrayList<String> assignments = new ArrayList<>();
 
     // เปลี่ยน Return Type เป็น ArrayList<API> เพื่อส่งกลับรายการงานทั้งหมด
     public static ArrayList<API> getJobs() {
@@ -136,8 +133,115 @@ public class API {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        // return list ออกไป (ไม่ต้องใช้ finally ก็ได้ในกรณีนี้)
         return list;
     }
+
+    public static ArrayList<JobAssignment> getUserAssign(String std_id) {
+        ArrayList<JobAssignment> list = new ArrayList<>();
+
+        String sql = "SELECT * FROM job_assignment WHERE std_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, std_id);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // แก้ไขจุดนี้: ใช้ JobAssignmentEntity แทน
+                    JobAssignmentEntity assign = new JobAssignmentEntity();
+
+                    // Map ข้อมูล
+                    assign.setAssignId(rs.getInt("assign_id"));
+                    assign.setJobId(rs.getInt("job_id"));
+                    assign.setStdId(rs.getString("std_id"));
+                    assign.setStatus(rs.getString("status"));
+                    assign.setAssignAt(rs.getString("assign_at"));
+                    assign.setFinishedAt(rs.getString("finished_at"));
+                    assign.setRewardAmount(rs.getInt("reward_amount"));
+
+                    // เพิ่มลง List (ทำได้เพราะ JobAssignmentEntity implements JobAssignment)
+                    list.add(assign);
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public static ArrayList<Profiles> getProfile(int userId) {
+        ArrayList<Profiles> list = new ArrayList<>();
+
+        // แก้ไขชื่อตารางตรงนี้ครับ (เดาว่าชื่อ profile)
+        String sql = "SELECT * FROM profile WHERE user_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    ProfilesEntity profile = new ProfilesEntity();
+
+                    profile.setProfileId(rs.getInt("profile_id"));
+                    profile.setUserId(rs.getInt("user_id"));
+                    profile.setBio(rs.getString("bio"));
+                    profile.setImagePath(rs.getString("image_path"));
+
+                    list.add(profile);
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public static boolean saveProfile(int userId, String bio, String imagePath) {
+        // 1. ลองเช็คก่อนว่ามี Profile หรือยัง
+        boolean exists = false;
+        String checkSql = "SELECT count(*) FROM profiles WHERE user_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(checkSql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    exists = true;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        // 2. ถ้ามีแล้วให้ UPDATE, ถ้ายังไม่มีให้ INSERT
+        String sql;
+        if (exists) {
+            sql = "UPDATE profiles SET bio = ?, image_path = ? WHERE user_id = ?";
+        } else {
+            sql = "INSERT INTO profiles (bio, image_path, user_id) VALUES (?, ?, ?)";
+        }
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, bio);
+            pstmt.setString(2, imagePath);
+            pstmt.setInt(3, userId); // Parameter ตัวที่ 3 คือ user_id ทั้งคู่
+
+            int rows = pstmt.executeUpdate();
+            return rows > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }
