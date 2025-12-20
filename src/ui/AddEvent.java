@@ -1,13 +1,17 @@
 package ui;
 
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.text.SimpleDateFormat; // [เพิ่ม] สำหรับจัดการวันที่
-import java.util.Date; // [เพิ่ม]
+import java.io.IOException; // [เพิ่ม]
+import java.nio.file.Files; // [เพิ่ม]
+import java.nio.file.Path; // [เพิ่ม]
+import java.nio.file.Paths; // [เพิ่ม]
+import java.nio.file.StandardCopyOption; // [เพิ่ม]
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.UUID; // [เพิ่ม]
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -25,6 +29,7 @@ public class AddEvent extends JFrame {
 
     // Colors & Fonts
     private static final Color BG_COLOR = new Color(245, 247, 250);
+    private static final Color Green_RGB = new Color(4, 152, 4);
     private static final Color PRIMARY_COLOR = new Color(52, 152, 219); // Blue
     private static final Color TEXT_COLOR = new Color(44, 62, 80);
     private static final Font LABEL_FONT = new Font("SansSerif", Font.BOLD, 14);
@@ -33,7 +38,7 @@ public class AddEvent extends JFrame {
     // Components
     private JLabel imageLabel;
     private JTextField titleField, vacanciesField, workingHoursField, paymentField;
-    private JTextField timeField; // [แก้ไข 1] เปลี่ยนจาก JSpinner เป็น JTextField
+    private JTextField timeField;
     private JSpinner dateSpinner;
     private JTextArea locationField, detailsArea;
     private JLabel previewText;
@@ -98,6 +103,7 @@ public class AddEvent extends JFrame {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
         actionPanel.setBackground(BG_COLOR);
 
+        JButton btnImport = createStyledButton("Import", Green_RGB, Color.WHITE);
         JButton btnClear = createStyledButton("Clear", new Color(149, 165, 166), Color.WHITE);
         JButton btnPost = createStyledButton("Post Event", PRIMARY_COLOR, Color.WHITE);
 
@@ -118,44 +124,51 @@ public class AddEvent extends JFrame {
                 return;
             }
 
-            // [แก้ไข 2] รวมวันที่และเวลาเข้าด้วยกันเพื่อบันทึก
+            // รวมวันที่และเวลา
             try {
-                // ดึงวันที่จาก Spinner
                 Date date = (Date) dateSpinner.getValue();
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
                 String dateStr = dateFormat.format(date);
 
-                // ดึงเวลาจาก TextField
                 String timeStr = timeField.getText().trim();
-                if (timeStr.isEmpty()) timeStr = "00:00:00"; // กันค่าว่าง
-                // ถ้ากรอกมาแค่ HH:mm เติม :00 ให้ครบ format SQL
+                if (timeStr.isEmpty()) timeStr = "00:00:00";
                 if (timeStr.length() == 5) timeStr += ":00";
 
-                // รวมร่าง
                 newJob.setDateTime(dateStr + " " + timeStr);
 
             } catch (Exception ex) {
-                newJob.setDateTime("2025-01-01 00:00:00"); // Default case error
+                newJob.setDateTime("2025-01-01 00:00:00");
             }
 
-            // จัดการรูปภาพ
+            // [แก้ไขส่วนนี้] จัดการบันทึกรูปภาพลงโฟลเดอร์
             if (selectedImageFile != null) {
-                // TODO: ต้องเขียน Method saveImageToLocal เหมือนในหน้า ProfileEditor
-                // ตอนนี้ Hardcode ไว้ก่อนเพื่อทดสอบ
-                newJob.setImagePath("user_images/job_test.jpg");
+                String savedPath = saveImageToProject(selectedImageFile);
+                if (savedPath != null) {
+                    newJob.setImagePath(savedPath);
+                } else {
+                    // กรณี save ไม่ผ่าน อาจจะใส่ path default หรือ null
+                    newJob.setImagePath(null);
+                }
             } else {
                 newJob.setImagePath(null);
             }
 
             newJob.setJobType(noButton.isSelected() ? "volunteer" : "paid");
-            newJob.setUserId(service.Auth.getAuthUser().getId());
+            // เช็ค service.Auth ให้แน่ใจว่า import ถูกต้องและ login แล้ว
+            // ถ้ายังไม่ได้ทำระบบ login อาจจะ hardcode userId ไปก่อนได้ เช่น 1
+            if (service.Auth.getAuthUser() != null) {
+                newJob.setUserId(service.Auth.getAuthUser().getId());
+            } else {
+                // Fallback กรณีเทสแบบไม่ Login
+                newJob.setUserId(1);
+            }
 
             int hourRate = 0;
             if (yesButton.isSelected()) {
                 try {
                     hourRate = Integer.parseInt(paymentField.getText());
                 } catch (NumberFormatException ex) {
-                    hourRate = 0; // หรือแจ้งเตือน error ก็ได้
+                    hourRate = 0;
                 }
             }
 
@@ -163,6 +176,7 @@ public class AddEvent extends JFrame {
 
             if (success) {
                 JOptionPane.showMessageDialog(this, "โพสต์งานสำเร็จ!");
+                clearForm(); // ล้างฟอร์มหลังโพสต์เสร็จ
             } else {
                 JOptionPane.showMessageDialog(this, "เกิดข้อผิดพลาดในการบันทึก");
             }
@@ -170,6 +184,7 @@ public class AddEvent extends JFrame {
 
         btnClear.addActionListener(e -> clearForm());
 
+        actionPanel.add(btnImport);
         actionPanel.add(btnClear);
         actionPanel.add(btnPost);
 
@@ -214,15 +229,12 @@ public class AddEvent extends JFrame {
         dateSpinner.setPreferredSize(new Dimension(120, 35));
         dateSpinner.setFont(INPUT_FONT);
 
-        // [แก้ไข 3] สร้าง TextField แทน Spinner
         timeField = createTextField();
         timeField.setPreferredSize(new Dimension(80, 35));
-        // ใส่ Placeholder หรือ Text เริ่มต้นได้ถ้าต้องการ
-        // timeField.setText("00:00");
 
         dateTimePanel.add(dateSpinner);
         dateTimePanel.add(Box.createHorizontalStrut(10));
-        dateTimePanel.add(timeField); // Add Field
+        dateTimePanel.add(timeField);
 
         gbc.gridx = 1; gbc.weightx = 1.0;
         panel.add(dateTimePanel, gbc);
@@ -462,7 +474,7 @@ public class AddEvent extends JFrame {
         workingHoursField.setText("");
         detailsArea.setText("");
         paymentField.setText("");
-        timeField.setText(""); // Clear Time
+        timeField.setText("");
         noButton.setSelected(true);
         togglePayment(false);
         imageLabel.setIcon(null);
@@ -510,7 +522,6 @@ public class AddEvent extends JFrame {
         locationField.getDocument().addDocumentListener(listener);
         workingHoursField.getDocument().addDocumentListener(listener);
         paymentField.getDocument().addDocumentListener(listener);
-        // [แก้ไข 4] เพิ่ม Listener ให้ TextField เวลา
         timeField.getDocument().addDocumentListener(listener);
 
         dateSpinner.addChangeListener(e -> updatePreview());
@@ -521,8 +532,6 @@ public class AddEvent extends JFrame {
     private void updatePreview() {
         JSpinner.DateEditor dateEditor = (JSpinner.DateEditor) dateSpinner.getEditor();
         String dateText = dateEditor.getTextField().getText();
-
-        // [แก้ไข 5] ดึงค่าเวลาจาก TextField แทน
         String timeText = timeField.getText();
 
         String paymentText = noButton.isSelected() ? "Unpaid" : paymentField.getText() + " Baht/hr";
@@ -540,6 +549,42 @@ public class AddEvent extends JFrame {
                 + "</div></body></html>";
 
         previewText.setText(html);
+    }
+
+    // [เพิ่มใหม่] ฟังก์ชันสำหรับบันทึกรูปภาพลงในโปรเจกต์
+    private String saveImageToProject(File sourceFile) {
+        if (sourceFile == null) return null;
+
+        try {
+            // 1. สร้างโฟลเดอร์ user_images ถ้ายังไม่มี
+            String destDir = "user_images";
+            File folder = new File(destDir);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+
+            // 2. ตั้งชื่อไฟล์ใหม่ด้วย UUID เพื่อป้องกันชื่อซ้ำ
+            String originalName = sourceFile.getName();
+            String extension = "";
+            int i = originalName.lastIndexOf('.');
+            if (i > 0) {
+                extension = originalName.substring(i); // .jpg, .png
+            }
+            String newFileName = UUID.randomUUID().toString() + extension;
+
+            // 3. ทำการ Copy ไฟล์
+            Path sourcePath = sourceFile.toPath();
+            Path destPath = Paths.get(destDir, newFileName);
+            Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
+
+            // 4. คืนค่า Path ที่จะเก็บลง DB
+            return destDir + "/" + newFileName;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Save Image Failed: " + e.getMessage());
+            return null;
+        }
     }
 
     static class NumericDocumentFilter extends DocumentFilter {

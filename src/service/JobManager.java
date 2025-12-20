@@ -107,115 +107,88 @@ public class JobManager {
         }
     }
 
-    // 3. + getJobById()
-    public Job getJobById(int jobId) {
-        String sql = "SELECT * FROM job WHERE job_id = ?";
-        Job job = null;
+    public static boolean applyJob(int job_id, int hoursAmount) {
+
+        // [แก้ไข] SQL ไม่ต้อง Insert title แล้ว
+        String sqlJob = "INSERT INTO job_assignment " +
+                "(job_id, std_id, status, assign_at, finished_at, reward_amount, hours_amount) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            pstmt = conn.prepareStatement(sqlJob);
+
+            pstmt.setInt(1, job_id);
+
+            String currentStdId = null;
+            User currentUser = Auth.getAuthUser();
+
+            if (currentUser instanceof Student) {
+                currentStdId = ((Student) currentUser).getStdId();
+            } else {
+                currentStdId = currentUser.getStd_id();
+            }
+
+            if (currentStdId == null) {
+                System.err.println("Error: Current Student ID is NULL. Cannot apply job.");
+                return false;
+            }
+            pstmt.setString(2, currentStdId);
+            pstmt.setString(3, "pending");
+            pstmt.setTimestamp(4, new java.sql.Timestamp(System.currentTimeMillis()));
+            pstmt.setNull(5, java.sql.Types.TIMESTAMP);
+            pstmt.setObject(6, null);
+            pstmt.setInt(7, hoursAmount);
+
+            // ไม่ต้อง set title แล้ว
+
+            int rowAffected = pstmt.executeUpdate();
+            return rowAffected > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) { e.printStackTrace(); }
+        }
+    }
+
+    public static boolean isJobApplied(int jobId) {
+        User user = Auth.getAuthUser();
+        if (user == null) return false;
+
+        String stdId = null;
+        if (user instanceof Student) {
+            stdId = ((Student) user).getStdId();
+        } else {
+            stdId = user.getStd_id();
+        }
+
+        if (stdId == null) return false;
+
+        String sql = "SELECT assign_id FROM job_assignment WHERE job_id = ? AND std_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, jobId);
-            ResultSet rs = pstmt.executeQuery();
+            pstmt.setString(2, stdId);
 
-            if (rs.next()) {
-                job = mapResultSetToJob(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                // ถ้ามีข้อมูล (next() เป็น true) แสดงว่าสมัครไปแล้ว
+                return rs.next();
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        return job;
     }
 
-    // 4. + searchJobsByTitle()
-    public ArrayList<Job> searchJobsByTitle(String keyword) {
-        String sql = "SELECT * FROM job WHERE title LIKE ?";
-        ArrayList<Job> jobList = new ArrayList<>();
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, "%" + keyword + "%");
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                jobList.add(mapResultSetToJob(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return jobList;
-    }
-
-    // 5. + searchJobsByLocation()
-    public ArrayList<Job> searchJobsByLocation(String location) {
-        String sql = "SELECT * FROM job WHERE location LIKE ?";
-        ArrayList<Job> jobList = new ArrayList<>();
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, "%" + location + "%");
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                jobList.add(mapResultSetToJob(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return jobList;
-    }
-
-    // 6. + sortJobsByDate()
-    public ArrayList<Job> sortJobsByDate() {
-        ArrayList<Job> allJobs = getAllJobs();
-        // แก้ไข: ใช้ getDateTime ตาม Interface
-        allJobs.sort(Comparator.comparing(Job::getDateTime));
-        return allJobs;
-    }
-
-    // 7. + sortJobsByVacancies()
-    public ArrayList<Job> sortJobsByVacancies() {
-        ArrayList<Job> allJobs = getAllJobs();
-        allJobs.sort(Comparator.comparingInt(Job::getVacancies).reversed());
-        return allJobs;
-    }
-
-    // --- Helper Methods ---
-
-    private ArrayList<Job> getAllJobs() {
-        String sql = "SELECT * FROM job";
-        ArrayList<Job> list = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                list.add(mapResultSetToJob(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
-    // Helper: แปลง ResultSet เป็น Job Object
-    private Job mapResultSetToJob(ResultSet rs) throws SQLException {
-        Job job = new JobEntity();
-        job.setJobId(rs.getInt("job_id"));
-        job.setTitle(rs.getString("title"));
-        job.setDetails(rs.getString("details"));
-        job.setLocation(rs.getString("location"));
-        job.setWorkingHours(rs.getInt("workingHours"));
-        job.setDateTime(rs.getString("dateTime"));
-        job.setImagePath(rs.getString("imagePath"));
-        job.setVacancies(rs.getInt("vacancies"));
-        job.setJobType(rs.getString("job_type"));
-        job.setUserId(rs.getInt("user_id"));
-        return job;
-    }
 }

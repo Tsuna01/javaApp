@@ -11,6 +11,8 @@ import java.util.List;
 public class Editperson extends JDialog {
 
     private static final Color BG_COLOR = new Color(240, 240, 240);
+
+    // ===== Fonts =====
     private static final Font FONT_TITLE = new Font("Tahoma", Font.BOLD, 18);
     private static final Font FONT_HEADER = new Font("SansSerif", Font.BOLD, 14);
     private static final Font FONT_NORMAL = new Font("SansSerif", Font.PLAIN, 13);
@@ -70,7 +72,6 @@ public class Editperson extends JDialog {
         scrollPane.setBackground(Color.WHITE);
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.setPreferredSize(new Dimension(600, 200));
-
         contentPanel.add(scrollPane, BorderLayout.CENTER);
 
         // Add new section
@@ -82,7 +83,6 @@ public class Editperson extends JDialog {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(new Color(0, 0, 0, 0));
         wrapper.add(mainPanel);
-
         setContentPane(wrapper);
     }
 
@@ -100,12 +100,12 @@ public class Editperson extends JDialog {
                         getWidth(), 0, new Color(255, 210, 160));
                 g2.setPaint(gp);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 20, 20));
-
                 // Fill bottom to make it square
                 g2.fillRect(0, getHeight() - 20, getWidth(), 20);
                 g2.dispose();
             }
         };
+
         header.setPreferredSize(new Dimension(680, 70));
         header.setOpaque(false);
         header.setBorder(new EmptyBorder(20, 30, 20, 30));
@@ -120,7 +120,6 @@ public class Editperson extends JDialog {
 
         header.add(title, BorderLayout.WEST);
         header.add(closeBtn, BorderLayout.EAST);
-
         return header;
     }
 
@@ -128,7 +127,6 @@ public class Editperson extends JDialog {
         JButton btn = new JButton("✕") {
             @Override
             protected void paintComponent(Graphics g) {
-                // Don't paint background, just text
                 super.paintComponent(g);
             }
         };
@@ -139,7 +137,6 @@ public class Editperson extends JDialog {
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
@@ -151,12 +148,11 @@ public class Editperson extends JDialog {
                 btn.setForeground(Color.WHITE);
             }
         });
-
         btn.addActionListener(e -> dispose());
-
         return btn;
     }
 
+    // ✅ [CHANGED] เพิ่มคอลัมน์ "View Profile"
     private JPanel createColumnHeaders() {
         JPanel headerPanel = new JPanel(new GridBagLayout());
         headerPanel.setBackground(Color.WHITE);
@@ -176,7 +172,7 @@ public class Editperson extends JDialog {
 
         // Name column with underline
         gbc.gridx = 1;
-        gbc.weightx = 0.5;
+        gbc.weightx = 0.45; // ✅ ปรับนิดหน่อยให้มีที่ให้ View
         JPanel namePanel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -193,10 +189,17 @@ public class Editperson extends JDialog {
         namePanel.add(nameLabel);
         headerPanel.add(namePanel, gbc);
 
-        // Action column
+        // ✅ View Profile column
         gbc.gridx = 2;
         gbc.weightx = 0.15;
-        JLabel actionLabel = new JLabel("Action");
+        JLabel viewLabel = new JLabel("View Profile", SwingConstants.CENTER);
+        viewLabel.setFont(FONT_HEADER);
+        headerPanel.add(viewLabel, gbc);
+
+        // Action column
+        gbc.gridx = 3;
+        gbc.weightx = 0.15;
+        JLabel actionLabel = new JLabel("Action", SwingConstants.CENTER);
         actionLabel.setFont(FONT_HEADER);
         headerPanel.add(actionLabel, gbc);
 
@@ -259,7 +262,9 @@ public class Editperson extends JDialog {
         addBtn.addActionListener(e -> {
             String id = idField.getText().trim();
             String name = nameField.getText().trim();
-            if (!id.isEmpty() && !name.isEmpty() && !id.equals("ID : B67xxxxx") && !name.equals("Name")) {
+            if (!id.isEmpty() && !name.isEmpty()
+                    && !id.equals("ID : B67xxxxx")
+                    && !name.equals("Name")) {
                 addParticipantRow(id, name);
                 idField.setText("ID : B67xxxxx");
                 nameField.setText("Name");
@@ -277,14 +282,11 @@ public class Editperson extends JDialog {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
                 g2.setColor(Color.WHITE);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 25, 25));
-
                 g2.setColor(new Color(200, 200, 200));
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.draw(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, 25, 25));
-
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -294,7 +296,6 @@ public class Editperson extends JDialog {
         field.setPreferredSize(new Dimension(150, 40));
         field.setBorder(new EmptyBorder(5, 15, 5, 15));
         field.setOpaque(false);
-
         field.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
             public void focusGained(java.awt.event.FocusEvent e) {
@@ -312,7 +313,6 @@ public class Editperson extends JDialog {
                 }
             }
         });
-
         return field;
     }
 
@@ -322,11 +322,8 @@ public class Editperson extends JDialog {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Green background
                 g2.setColor(new Color(76, 175, 80));
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 25, 25));
-
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -338,12 +335,48 @@ public class Editperson extends JDialog {
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 btn.repaint();
             }
+        });
+        return btn;
+    }
+
+    // ✅ [NEW] ปุ่ม View (ตอนนี้เป็นปุ่มเปล่าๆ / placeholder)
+    private JButton createViewButton() {
+        JButton btn = new JButton("👁") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // พื้นหลังอ่อนๆ ให้ดูเป็นปุ่ม (ปรับได้)
+                g2.setColor(new Color(245, 245, 245));
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 18, 18));
+
+                g2.setColor(new Color(200, 200, 200));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.draw(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, 18, 18));
+
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        btn.setForeground(Color.BLACK);
+        btn.setPreferredSize(new Dimension(45, 40));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // ตอนนี้ยังไม่ทำอะไร แค่โชว์ปุ่มไว้ก่อน
+        btn.addActionListener(e -> {
+            // TODO: เปิดหน้าโปรไฟล์/dialog โปรไฟล์ในอนาคต
+            // ตอนนี้ให้เป็นปุ่มเปล่า ๆ ตามที่ขอ
         });
 
         return btn;
@@ -360,6 +393,7 @@ public class Editperson extends JDialog {
             createPanel(name);
         }
 
+        // ✅ [CHANGED] เพิ่มคอลัมน์ View และขยับถังขยะไป Action
         private void createPanel(String name) {
             panel = new JPanel(new GridBagLayout());
             panel.setBackground(Color.WHITE);
@@ -376,25 +410,30 @@ public class Editperson extends JDialog {
             gbc.weightx = 0.25;
             JPanel idPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
             idPanel.setBackground(Color.WHITE);
-
             JLabel avatar = new JLabel(new ImageIcon(createAvatarImage(40)));
             JLabel idLabel = new JLabel("ID : " + id);
             idLabel.setFont(FONT_NORMAL);
-
             idPanel.add(avatar);
             idPanel.add(idLabel);
             panel.add(idPanel, gbc);
 
             // Name field
             gbc.gridx = 1;
-            gbc.weightx = 0.5;
+            gbc.weightx = 0.45;
             nameField = createNameField(name);
             panel.add(nameField, gbc);
 
-            // Delete button
+            // ✅ View button
             gbc.gridx = 2;
             gbc.weightx = 0.15;
             gbc.fill = GridBagConstraints.NONE;
+            gbc.anchor = GridBagConstraints.CENTER;
+            JButton viewBtn = createViewButton();
+            panel.add(viewBtn, gbc);
+
+            // ✅ Delete button (ถังขยะ) ยังอยู่เหมือนเดิม แค่เลื่อนไปคอลัมน์ Action
+            gbc.gridx = 3;
+            gbc.weightx = 0.15;
             JButton deleteBtn = createDeleteButton();
             deleteBtn.addActionListener(e -> {
                 participantListPanel.remove(panel);
@@ -411,14 +450,11 @@ public class Editperson extends JDialog {
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
                     g2.setColor(Color.WHITE);
                     g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 25, 25));
-
                     g2.setColor(new Color(200, 200, 200));
                     g2.setStroke(new BasicStroke(1.5f));
                     g2.draw(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, 25, 25));
-
                     g2.dispose();
                     super.paintComponent(g);
                 }
@@ -436,10 +472,8 @@ public class Editperson extends JDialog {
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
                     g2.setColor(new Color(244, 67, 54));
                     g2.fillOval(5, 5, getWidth() - 10, getHeight() - 10);
-
                     g2.dispose();
                     super.paintComponent(g);
                 }
@@ -451,7 +485,6 @@ public class Editperson extends JDialog {
             btn.setBorderPainted(false);
             btn.setFocusPainted(false);
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             return btn;
         }
 
@@ -466,11 +499,12 @@ public class Editperson extends JDialog {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         // Pink gradient circle
-        GradientPaint gp = new GradientPaint(0, 0, new Color(255, 182, 193), size, size, new Color(255, 105, 180));
+        GradientPaint gp = new GradientPaint(0, 0, new Color(255, 182, 193),
+                size, size, new Color(255, 105, 180));
         g2.setPaint(gp);
         g2.fillOval(0, 0, size, size);
-
         g2.dispose();
+
         return img;
     }
 

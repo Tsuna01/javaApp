@@ -1,17 +1,25 @@
 package ui;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import service.API;
+// [Import สำหรับ Database]
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import service.*;
 import ui.component.FilterUI;
 import ui.component.Navbar;
 
@@ -27,16 +35,63 @@ public class AvailableJob extends JFrame {
     private static final Font FONT_BTN = new Font("SansSerif", Font.BOLD, 13);
 
     // Data Management
-    private ArrayList<API> allJobs; // เก็บงานทั้งหมดที่โหลดจาก DB ครั้งแรก
-    private JPanel gridPanel;       // Panel ที่เก็บ Card งาน (เอาไว้สั่ง removeAll/repaint)
-    private JTextField searchField; // ช่องค้นหา
+    private ArrayList<API> allJobs;
+    private JPanel gridPanel;
+    private JTextField searchField;
 
     public AvailableJob() {
-        // 1. โหลดข้อมูลเตรียมไว้ก่อน
+        // 1. โหลดข้อมูลงานทั้งหมดมาก่อน
         allJobs = API.getJobs();
         if (allJobs == null) allJobs = new ArrayList<>();
 
+        // 2. กรองงานที่สมัครไปแล้วทิ้ง ก่อนจะเริ่มวาดหน้าจอ
+        filterAppliedJobs();
+
         initialize();
+    }
+
+    // ฟังก์ชันสำหรับกรองงานที่ user ปัจจุบันสมัครไปแล้ว
+    private void filterAppliedJobs() {
+        // ถ้ายังไม่ได้ Login ให้ข้ามไป
+        if (Auth.getAuthUser() == null) return;
+
+        List<String> appliedJobIds = new ArrayList<>();
+        String currentStdId = null;
+
+        // เช็คว่าเป็น Student หรือไม่ เพื่อดึง ID ให้ถูกต้อง
+        if (Auth.getAuthUser() instanceof Student) {
+            Student s = (Student) Auth.getAuthUser();
+            currentStdId = s.getStdId();
+        } else {
+            currentStdId = Auth.getAuthUser().getStd_id();
+        }
+
+        System.out.println("Filtering jobs for Student ID: " + currentStdId);
+
+        if (currentStdId == null) {
+            System.err.println("Warning: std_id is null for user " + Auth.getAuthUser().getName());
+            return;
+        }
+
+        String sql = "SELECT job_id FROM job_assignment WHERE std_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, currentStdId);
+            ResultSet rs = pstmt.executeQuery();
+
+            // เก็บ ID ของงานที่สมัครแล้วไว้ใน List
+            while (rs.next()) {
+                appliedJobIds.add(String.valueOf(rs.getInt("job_id")));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // ลบงานที่มี ID ตรงกับใน appliedJobIds ออกจาก allJobs
+        allJobs.removeIf(job -> appliedJobIds.contains(job.jobId));
     }
 
     private void initialize() {
@@ -103,12 +158,11 @@ public class AvailableJob extends JFrame {
         searchField.setBorder(new RoundedBorder(25));
         searchField.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
-        // [Functional] เพิ่ม Logic ค้นหาเมื่อกด Enter
         searchField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    performSearchAndFilter(null); // ค้นหาโดยไม่ใช้ Filter (ใช้ Text อย่างเดียว)
+                    performSearchAndFilter(null);
                 }
             }
         });
@@ -137,18 +191,16 @@ public class AvailableJob extends JFrame {
         filterBtn.setFocusPainted(false);
         filterBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // [Functional] เปิด FilterUI และรับค่ากลับมา
         filterBtn.addActionListener(e -> {
             JDialog dialog = new JDialog(this, "Filter Jobs", true);
             dialog.setLayout(new BorderLayout());
 
             FilterUI filterUI = new FilterUI();
 
-            // ดักจับเมื่อกดปุ่ม Apply ใน FilterUI
             filterUI.setOnApplyListener(evt -> {
                 FilterUI.FilterData data = filterUI.getFilterData();
-                performSearchAndFilter(data); // ส่งข้อมูลไปกรอง
-                dialog.dispose(); // ปิดหน้าต่าง
+                performSearchAndFilter(data);
+                dialog.dispose();
             });
 
             dialog.add(filterUI);
@@ -173,7 +225,6 @@ public class AvailableJob extends JFrame {
 
         List<API> result = new ArrayList<>(allJobs);
 
-        // 1. กรองด้วย Search Text
         if (!searchText.isEmpty()) {
             String lowerSearch = searchText.toLowerCase();
             result = result.stream()
@@ -182,13 +233,10 @@ public class AvailableJob extends JFrame {
                     .collect(Collectors.toList());
         }
 
-        // 2. กรองด้วย FilterUI Data
         if (filterData != null) {
-            // 2.1 Job Type (Volunteer / Paid)
             boolean showVol = filterData.isVolunteer;
             boolean showPaid = filterData.isPaid;
 
-            // ถ้าไม่เลือกอะไรเลย หรือเลือกทั้งคู่ ให้แสดงหมด แต่ถ้าเลือกอย่างใดอย่างหนึ่งให้กรอง
             if (showVol != showPaid) {
                 if (showVol) {
                     result = result.stream().filter(j -> isVolunteerJob(j.jobType)).collect(Collectors.toList());
@@ -197,16 +245,6 @@ public class AvailableJob extends JFrame {
                 }
             }
 
-            // 2.2 Date Range (ข้ามส่วนนี้ถ้าไม่มี Parsing logic ที่แน่นอน)
-
-            // 2.3 Sorting
-            if ("Oldest".equals(filterData.sortByDate)) {
-                // TODO: Implement Date Sorting if Date is parsable
-            } else if ("Newest".equals(filterData.sortByDate)) {
-                // TODO: Implement Date Sorting if Date is parsable
-            }
-
-            // [FIXED] ใช้ int ตรงๆ ไม่ต้อง parse
             if ("Low -> High".equals(filterData.sortByHours)) {
                 result.sort(Comparator.comparingInt(j -> j.workingHours));
             } else if ("High -> Low".equals(filterData.sortByHours)) {
@@ -223,11 +261,10 @@ public class AvailableJob extends JFrame {
 
     // ========= JOB GRID SYSTEM ==========
     private JScrollPane createJobGridScroll() {
-        gridPanel = new JPanel(new GridLayout(0, 2, 30, 30)); // 2 Columns
+        gridPanel = new JPanel(new GridLayout(0, 2, 30, 30));
         gridPanel.setOpaque(false);
         gridPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // แสดงผลครั้งแรก (งานทั้งหมด)
         updateJobGrid(allJobs);
 
         JScrollPane scroll = new JScrollPane(gridPanel);
@@ -239,9 +276,8 @@ public class AvailableJob extends JFrame {
         return scroll;
     }
 
-    // [Functional] Method อัพเดท Grid
     private void updateJobGrid(List<API> jobsToShow) {
-        gridPanel.removeAll(); // ลบการ์ดเก่าออก
+        gridPanel.removeAll();
 
         if (jobsToShow == null || jobsToShow.isEmpty()) {
             JLabel empty = new JLabel("ไม่พบงานที่คุณค้นหา (No Jobs Found)");
@@ -258,8 +294,8 @@ public class AvailableJob extends JFrame {
             }
         }
 
-        gridPanel.revalidate(); // คำนวณ Layout ใหม่
-        gridPanel.repaint();    // วาดใหม่
+        gridPanel.revalidate();
+        gridPanel.repaint();
     }
 
     // ========= JOB CARD ==========
@@ -270,10 +306,8 @@ public class AvailableJob extends JFrame {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                // Shadow
                 g2.setColor(new Color(0, 0, 0, 15));
                 g2.fillRoundRect(4, 4, getWidth() - 8, getHeight() - 8, 20, 20);
-                // BG
                 g2.setColor(Color.WHITE);
                 g2.fillRoundRect(0, 0, getWidth() - 8, getHeight() - 8, 20, 20);
             }
@@ -283,8 +317,10 @@ public class AvailableJob extends JFrame {
         card.setPreferredSize(new Dimension(500, 200));
 
         // Image
-        // [Safety] ใช้ Placeholder แทนถ้า ImagePath มีปัญหา
-        JLabel image = new JLabel(new ImageIcon(createPlaceholderImage(100, new Color(139, 69, 19))));
+        String path = work.imagePath;
+        ImageIcon icon = loadAndResizeImage(path, 100, 100);
+
+        JLabel image = new JLabel(icon);
         image.setVerticalAlignment(SwingConstants.TOP);
         card.add(image, BorderLayout.WEST);
 
@@ -342,7 +378,37 @@ public class AvailableJob extends JFrame {
         });
 
         JButton acceptBtn = createRoundedButton("Accept Job", Color.WHITE, new Color(255, 160, 122), true);
-        // เพิ่ม Logic Accept Job ตรงนี้ถ้าต้องการ
+
+        acceptBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "คุณต้องการรับงานนี้ใช่หรือไม่?",
+                    "ยืนยันการรับงาน",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                try {
+                    int id = Integer.parseInt(work.jobId);
+
+                    // [แก้ไขแล้ว] ส่งแค่ id และ workingHours (ไม่ต้องส่ง title)
+                    boolean success = JobManager.applyJob(id, work.workingHours);
+
+                    if (success) {
+                        JOptionPane.showMessageDialog(this, "รับงานสำเร็จ! (Applied Successfully)");
+
+                        // เมื่อกด OK -> ปิดหน้านี้ -> เปิดหน้า AvailableJob ใหม่
+                        // ซึ่งหน้าใหม่นี้จะวิ่งเข้า Constructor -> filterAppliedJobs -> งานจะหายไป
+                        new AvailableJob().setVisible(true);
+                        dispose();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "ไม่สามารถรับงานได้ (อาจเกิดข้อผิดพลาดหรือรับงานไปแล้ว)",
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
 
         btnPanel.add(detailsBtn);
         btnPanel.add(acceptBtn);
@@ -426,5 +492,31 @@ public class AvailableJob extends JFrame {
         public Shape getShape(int x, int y, int w, int h) {
             return new java.awt.geom.RoundRectangle2D.Float(x, y, w, h, radius, radius);
         }
+    }
+
+    private ImageIcon loadAndResizeImage(String imagePath, int width, int height) {
+        if (imagePath == null || imagePath.trim().isEmpty()) {
+            return new ImageIcon(createPlaceholderImage(width, new Color(139, 69, 19)));
+        }
+
+        try {
+            BufferedImage originalImage = null;
+
+            if (imagePath.startsWith("http")) {
+                originalImage = ImageIO.read(new URL(imagePath));
+            } else {
+                originalImage = ImageIO.read(new File(imagePath));
+            }
+
+            if (originalImage != null) {
+                Image scaledImage = originalImage.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(scaledImage);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Load image error: " + imagePath);
+        }
+
+        return new ImageIcon(createPlaceholderImage(width, new Color(139, 69, 19)));
     }
 }

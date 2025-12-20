@@ -1,31 +1,53 @@
 package model;
 
 public interface JobAssignment {
-    // ID การมอบหมายงาน
     int getAssignId();
+
     void setAssignId(int assignId);
 
-    // ID ของงาน
     int getJobId();
+
     void setJobId(int jobId);
 
-    // ID ของนักศึกษา (เพิ่มให้เพราะใน Entity มี)
+    // ยังต้องมี getTitle เพื่อใช้แสดงผลหน้าจอ (ดึงมาจากการ JOIN)
+    String getTitle();
+
+    void setTitle(String title);
+
     String getStdId();
+
     void setStdId(String stdId);
 
-    // สถานะ
     String getStatus();
+
     void setStatus(String status);
 
-    // เวลาที่มอบหมาย
     String getAssignAt();
+
     void setAssignAt(String assignAt);
 
-    // เวลาที่เสร็จ
     String getFinishedAt();
+
     void setFinishedAt(String finishedAt);
 
-    // ค่าตอบแทน
+    int getHoursAmount();
+
+    void setHoursAmount(int hoursAmount);
+
     int getRewardAmount();
+
     void setRewardAmount(int rewardAmount);
+
+    // Additional fields for UI display
+    String getImagePath();
+
+    void setImagePath(String imagePath);
+
+    String getLocation();
+
+    void setLocation(String location);
+
+    String getDateTime();
+
+    void setDateTime(String dateTime);
 }
