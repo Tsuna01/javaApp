@@ -55,6 +55,9 @@ public abstract class User {
         this.password = password;
     }
 
+    public void setStd_id(){ this.std_id = std_id; }
+    public String getStd_id(){ return std_id; }
+
     public String getStatus() {
         return status;
     }

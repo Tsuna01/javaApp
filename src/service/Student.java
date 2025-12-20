@@ -6,12 +6,12 @@ import javax.swing.*;
 
 public class Student extends User {
     public int volunteerHours;
-    public String status;
     public String std_id;
+    public String status;
 
 
     // Constructor หลัก
-    public Student(int id, String name, String email, String password, String status, String std_id) {
+    public Student(int id, String name, String email, String password, String status,String std_id) {
         super(id, name, email, password);
         this.status = "student";
         this.std_id = std_id;

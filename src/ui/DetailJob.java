@@ -152,13 +152,6 @@ public class DetailJob extends JFrame {
 
         String[] timeParts = dayD[1].split(":");
 
-        System.out.println("ปี: " + dateParts[0]);
-        System.out.println("เดือน: " + dateParts[1]);
-        System.out.println("วันที่: " + dateParts[2]);
-
-        System.out.println("ชั่วโมง: " + timeParts[0]);
-        System.out.println("นาที: " + timeParts[1]);
-
         switch (dateParts[1]) {
             case "1":
             case "01":

@@ -207,6 +207,7 @@ public class ProfileEditor extends JFrame {
             // 5. แจ้งผลลัพธ์
             if (textSuccess && imageSuccess) {
                 JOptionPane.showMessageDialog(this, "บันทึกข้อมูลและรูปภาพสำเร็จ!");
+                new Profile().setVisible(true);
                 dispose();
             } else if (textSuccess) {
                 JOptionPane.showMessageDialog(this, "บันทึกข้อมูลสำเร็จ แต่รูปภาพมีปัญหา", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -216,7 +217,10 @@ public class ProfileEditor extends JFrame {
             }
         });
 
-        cancelBtn.addActionListener(e -> dispose());
+        cancelBtn.addActionListener(e -> {
+            new Profile().setVisible(true);
+            dispose();
+        });
         footer.add(cancelBtn);
         footer.add(saveBtn);
         card.add(footer, BorderLayout.SOUTH);

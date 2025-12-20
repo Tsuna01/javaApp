@@ -23,6 +23,7 @@ public class API {
     public String dateTime;
     public int vacancies;
     public String jobType;
+    public String imagePath;
 
     // เปลี่ยน Return Type เป็น ArrayList<API> เพื่อส่งกลับรายการงานทั้งหมด
     public static ArrayList<API> getJobs() {
@@ -47,9 +48,9 @@ public class API {
 
                 // แปลง Date/Time เป็น String (หรือจะดึงเป็น Timestamp ก็ได้)
                 job.dateTime = rs.getString("dateTime");
-
                 job.vacancies = rs.getInt("vacancies");
                 job.jobType = rs.getString("job_type");
+                job.imagePath = rs.getString("imagePath");
 
                 // เพิ่ม object ลงใน list
                 list.add(job);

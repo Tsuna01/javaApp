@@ -3,12 +3,12 @@ package ui;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.geom.Ellipse2D; // [เพิ่ม] สำหรับตัดรูปวงกลม
+import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
-import java.io.File; // [เพิ่ม] สำหรับอ่านไฟล์
-import java.io.IOException; // [เพิ่ม]
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
-import javax.imageio.ImageIO; // [เพิ่ม]
+import javax.imageio.ImageIO;
 
 import model.JobAssignment;
 import model.Profiles;
@@ -19,20 +19,21 @@ import ui.component.Navbar;
 
 public class Profile extends JFrame {
 
-    private static final Color BG_COLOR = new Color(240, 240, 240); // Light gray background
+    private static final Color BG_COLOR = new Color(240, 240, 240);
 
-    public String nameUser = Auth.getAuthUser().getName();
-    public String statusUser = Auth.getAuthUser().getStatus();
+    // ดึงข้อมูล User (ควรเช็ค null ใน Auth ก่อนใช้จริง)
+    public String nameUser = (Auth.getAuthUser() != null) ? Auth.getAuthUser().getName() : "Guest";
+    public String statusUser = (Auth.getAuthUser() != null) ? Auth.getAuthUser().getStatus() : "guest";
     public String txtStatusUser;
     public String txtIdUser;
-    public String txtEmail = Auth.getAuthUser().getEmail();
+    public String txtEmail = (Auth.getAuthUser() != null) ? Auth.getAuthUser().getEmail() : "";
 
     // Fonts
     private static final Font FONT_NAME = new Font("SansSerif", Font.BOLD, 28);
     private static final Font FONT_ID = new Font("SansSerif", Font.PLAIN, 14);
     private static final Font FONT_THAI = new Font("Tahoma", Font.PLAIN, 14);
     private static final Font FONT_THAI_BOLD = new Font("Tahoma", Font.BOLD, 16);
-    private static final Font FONT_BIO = new Font("Tahoma", Font.PLAIN, 16);
+    private static final Font FONT_BIO = new Font("Tahoma", Font.PLAIN, 14); // ปรับลดขนาดลงเล็กน้อยให้อ่านง่าย
 
     public Profile() {
         initialize();
@@ -65,9 +66,7 @@ public class Profile extends JFrame {
         topBar.setBorder(new EmptyBorder(0, 0, 20, 0));
 
         JButton backBtn = createBackButton();
-        backBtn.addActionListener(e -> {
-            dispose();
-        });
+        backBtn.addActionListener(e -> dispose());
         topBar.add(backBtn);
 
         body.add(topBar, BorderLayout.NORTH);
@@ -78,18 +77,15 @@ public class Profile extends JFrame {
 
     // ========= PROFILE CARD ==========
     private JPanel createProfileCard() {
-
         JPanel card = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
                 // Shadow
                 g2.setColor(new Color(0, 0, 0, 20));
                 g2.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, 40, 40);
-
                 // BG
                 g2.setColor(Color.WHITE);
                 g2.fillRoundRect(0, 0, getWidth() - 10, getHeight() - 10, 40, 40);
@@ -102,31 +98,44 @@ public class Profile extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.insets = new Insets(10, 20, 10, 20);
 
+        // 1. Prepare Data
+        String userIdForQuery = String.valueOf(Auth.getAuthUser().getId());
+        ArrayList<Profiles> profiles = API.getProfile(Auth.getAuthUser().getId());
+        String imagePath = null;
+        String bioTextContent = "No comment 101"; // Default Bio
+
+        if (profiles != null && !profiles.isEmpty()) {
+            imagePath = profiles.get(0).getImagePath();
+            String tempBio = profiles.get(0).getBio();
+            if (tempBio != null && !tempBio.equals("null") && !tempBio.trim().isEmpty()) {
+                bioTextContent = tempBio;
+            }
+        }
+
+        if (statusUser.equals("admin")) {
+            txtStatusUser = "ผู้ดูแลระบบ";
+            txtIdUser = userIdForQuery;
+        } else {
+            txtStatusUser = "นักศึกษา";
+            if (Auth.getAuthUser() instanceof Student) {
+                Student s = (Student) Auth.getAuthUser();
+                txtIdUser = s.getStdId();
+            } else {
+                txtIdUser = userIdForQuery;
+            }
+        }
+
         // --- Left: Avatar ---
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridheight = 2;
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridheight = 2;
         gbc.weightx = 0;
         gbc.anchor = GridBagConstraints.NORTHWEST;
 
-        // [แก้ไข] ส่วนการดึงรูปภาพ Avatar
-        ArrayList<Profiles> profiles = API.getProfile(Auth.getAuthUser().getId());
-        String imagePath = null;
-        if (profiles != null && !profiles.isEmpty()) {
-            // สมมติว่า getImagePath() คืนค่า path ที่เซฟไว้ (เช่น "user_images/profile_101.png")
-            imagePath = profiles.get(0).getImagePath();
-        }
-
-        // เรียกเมธอด getAvatarImage เพื่อโหลดรูปและตัดเป็นวงกลม (ถ้าไม่มีจะใช้ Placeholder)
         ImageIcon avatarIcon = getAvatarImage(imagePath, 180);
         JLabel avatarLarge = new JLabel(avatarIcon);
-
         card.add(avatarLarge, gbc);
 
         // --- Right Top: Info ---
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.gridheight = 1;
+        gbc.gridx = 1; gbc.gridy = 0; gbc.gridheight = 1;
         gbc.weightx = 1.0;
 
         JPanel infoPanel = new JPanel();
@@ -139,20 +148,8 @@ public class Profile extends JFrame {
         JLabel nameLbl = new JLabel(nameUser);
         nameLbl.setFont(FONT_NAME);
         nameRow.add(nameLbl);
+        nameRow.add(Box.createHorizontalStrut(20));
 
-        // Spacer
-        nameRow.add(Box.createHorizontalStrut(50));
-
-        if (statusUser.equals("admin")) {
-            txtStatusUser = "ผู้ดูแลระบบ";
-            txtIdUser = String.valueOf(Auth.getAuthUser().getId());
-        } else {
-            txtStatusUser = "นักศึกษา";
-            Student s = (Student) Auth.getAuthUser();
-            txtIdUser = s.getStdId();
-        }
-
-        // Status
         JLabel statusLbl = new JLabel("สถานะ : " + txtStatusUser);
         statusLbl.setFont(FONT_THAI);
         nameRow.add(statusLbl);
@@ -160,31 +157,31 @@ public class Profile extends JFrame {
         infoPanel.add(nameRow);
         infoPanel.add(Box.createVerticalStrut(10));
 
-        // ID
+        // ID & Email
         JLabel idLbl = new JLabel("ID : " + txtIdUser);
         idLbl.setFont(FONT_ID);
         infoPanel.add(idLbl);
 
-        // Count Jobs
-        ArrayList<JobAssignment> jobAss = API.getUserAssign(txtIdUser);
-        int countComplete = 0;
-        for (JobAssignment i : jobAss) {
-            if ("complete".equals(i.getStatus())) {
-                countComplete++;
-            }
-        }
-
-        // Email
         JLabel emailLbl = new JLabel("Email : " + txtEmail);
         emailLbl.setFont(FONT_ID);
         infoPanel.add(emailLbl);
 
         card.add(infoPanel, gbc);
 
-        // --- Right Bottom: Bio ---
-        gbc.gridx = 1;
-        gbc.gridy = 1;
+        // --- Right Bottom: Bio & Stats ---
+        gbc.gridx = 1; gbc.gridy = 1;
         gbc.weighty = 1.0;
+
+        // Count Jobs Logic
+        ArrayList<JobAssignment> jobAss = API.getUserAssign(txtIdUser);
+        int countComplete = 0;
+        if (jobAss != null) {
+            for (JobAssignment i : jobAss) {
+                if ("complete".equalsIgnoreCase(i.getStatus())) {
+                    countComplete++;
+                }
+            }
+        }
 
         JPanel bioPanel = new JPanel(new BorderLayout(0, 10));
         bioPanel.setOpaque(false);
@@ -210,58 +207,77 @@ public class Profile extends JFrame {
 
         bioPanel.add(bioHeader, BorderLayout.NORTH);
 
-        // ==========================================
-        // ส่วนจัดการ BIO (ใช้ข้อมูลที่ดึงมาก่อนหน้านี้)
-        // ==========================================
-        String BIO = "No comment 101"; // ค่า Default
-        if (profiles != null && !profiles.isEmpty()) {
-            String tempBio = profiles.get(0).getBio();
-            if (tempBio != null && !tempBio.equals("null") && !tempBio.trim().isEmpty()) {
-                BIO = tempBio;
-            }
-        }
-
-        // 2. ตัดคำทุก 100 ตัวอักษร (ตามโค้ดเดิม)
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < BIO.length(); i++) {
-            sb.append(BIO.charAt(i));
-            if ((i + 1) % 100 == 0 && (i + 1) < BIO.length()) {
-                sb.append("\n");
-            }
-        }
-        String txtBIO = sb.toString();
-
-        // 3. แสดงผลใน JTextArea
-        JTextArea bioText = new JTextArea(txtBIO);
+        // Bio Content (ใช้ JTextArea จัดการ Wrap text เอง)
+        JTextArea bioText = new JTextArea(bioTextContent);
         bioText.setFont(FONT_BIO);
-        bioText.setLineWrap(true);
-        bioText.setWrapStyleWord(true);
+        bioText.setLineWrap(true);       // ตัดบรรทัดอัตโนมัติ
+        bioText.setWrapStyleWord(true);  // ตัดที่ช่องว่างคำ
         bioText.setEditable(false);
         bioText.setOpaque(false);
         bioText.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        bioPanel.add(bioText, BorderLayout.CENTER);
+        // ใส่ JScrollPane เผื่อ Bio ยาวเกินพื้นที่
+        JScrollPane bioScroll = new JScrollPane(bioText);
+        bioScroll.setBorder(null);
+        bioScroll.setOpaque(false);
+        bioScroll.getViewport().setOpaque(false);
 
+        bioPanel.add(bioScroll, BorderLayout.CENTER);
         card.add(bioPanel, gbc);
 
-        // --- Edit Button (Bottom Right) ---
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        gbc.weighty = 0;
-        gbc.anchor = GridBagConstraints.SOUTHEAST;
+        // --- Buttons (Bottom) ---
+        // [Fixed] ย้ายมาเช็คตรงนี้ เพื่อให้ return card เสมอไม่ว่าจะ user ประเภทไหน
+        if ("student".equalsIgnoreCase(statusUser)) {
+            gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+            gbc.weighty = 0;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.anchor = GridBagConstraints.CENTER;
+
+            JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+            btnPanel.setOpaque(false);
+            btnPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
+
+            JButton exportBtn = createPillButton("Export");
+            exportBtn.addActionListener(e -> {
+                new ExportF().setVisible(true);
+                // dispose(); // ถ้าไม่อยากปิดหน้านี้ ก็ comment บรรทัดนี้
+            });
+
+            JButton editBtn = createPillButton("Edit");
+            editBtn.addActionListener(e -> {
+                new ProfileEditor().setVisible(true);
+                dispose(); // ปิดหน้าเก่า แล้วไปหน้า Edit
+            });
+
+            btnPanel.add(exportBtn);
+            btnPanel.add(editBtn);
+
+            card.add(btnPanel, gbc);
+        }
 
         JButton editBtn = createPillButton("Edit");
         editBtn.addActionListener(e -> {
             new ProfileEditor().setVisible(true);
+            dispose(); // ปิดหน้าเก่า แล้วไปหน้า Edit
         });
-        card.add(editBtn, gbc);
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.CENTER;
 
-        return card;
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        btnPanel.setOpaque(false);
+        btnPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
+
+        btnPanel.add(editBtn);
+
+        card.add(btnPanel, gbc);
+
+        return card; // ต้อง return card เสมอ ห้าม return null
     }
 
-    // ========= COMPONENTS & HELPER METHODS ==========
+    // ========= COMPONENTS & HELPERS ==========
 
-    // [เพิ่ม] เมธอดโหลดรูปภาพและตัดเป็นวงกลม
     private ImageIcon getAvatarImage(String path, int size) {
         if (path != null && !path.trim().isEmpty() && !path.equals("null")) {
             try {
@@ -275,17 +291,15 @@ public class Profile extends JFrame {
                         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                         g2.setClip(new Ellipse2D.Float(0, 0, size, size));
                         g2.drawImage(originalImage, 0, 0, size, size, null);
-
                         g2.dispose();
                         return new ImageIcon(circledImage);
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("Error loading image: " + e.getMessage());
             }
         }
-        // ถ้าโหลดไม่ได้ให้ใช้ Placeholder สีชมพูเหมือนเดิม
-        return new ImageIcon(createPlaceholderImage(size, Color.PINK));
+        return new ImageIcon(createPlaceholderImage(size, new Color(255, 182, 193))); // สีชมพูอ่อน
     }
 
     private JButton createBackButton() {
@@ -307,6 +321,7 @@ public class Profile extends JFrame {
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(100, 40));
         return btn;
     }
@@ -317,7 +332,12 @@ public class Profile extends JFrame {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
+                // Hover Effect
+                if (getModel().isRollover()) {
+                    g2.setColor(new Color(245, 245, 245));
+                } else {
+                    g2.setColor(Color.WHITE);
+                }
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
                 g2.setColor(Color.BLACK);
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
@@ -330,7 +350,8 @@ public class Profile extends JFrame {
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
-        btn.setPreferredSize(new Dimension(100, 40));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(120, 40)); // กว้างขึ้นนิดหน่อย
         return btn;
     }
 
