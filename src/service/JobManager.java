@@ -1,20 +1,20 @@
 package service;
 
 import model.Job;
-import model.JobEntity; // ต้อง import Implementation class
+import model.JobEntity;
+import service.Auth; // อย่าลืม import Auth
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Comparator;
 
 public class JobManager {
 
     // 1. + addJob()
     public boolean addJob(Job job, int hourRate) {
-        String sqlJob = "INSERT INTO job (title, details, location, workingHours, dateTime, imagePath, vacancies, job_type, user_id) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // [แก้ไข] เพิ่ม end_date ใน SQL
+        String sqlJob = "INSERT INTO job (title, details, location, workingHours, dateTime, end_date, imagePath, vacancies, job_type, user_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        // [แก้ไข 1] เพิ่ม job_id และ user_id ในคำสั่ง SQL
         String sqlPaid = "INSERT INTO paid_jobs (job_id, hour_rate, user_id) VALUES (?, ?, ?)";
 
         Connection conn = null;
@@ -24,7 +24,7 @@ public class JobManager {
 
         try {
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false); // เริ่ม Transaction
+            conn.setAutoCommit(false);
 
             // --- 1. Insert ลงตาราง JOB ---
             pstmtJob = conn.prepareStatement(sqlJob, Statement.RETURN_GENERATED_KEYS);
@@ -33,10 +33,18 @@ public class JobManager {
             pstmtJob.setString(3, job.getLocation());
             pstmtJob.setInt(4, job.getWorkingHours());
             pstmtJob.setString(5, job.getDateTime());
-            pstmtJob.setString(6, job.getImagePath());
-            pstmtJob.setInt(7, job.getVacancies());
-            pstmtJob.setString(8, job.getJobType());
-            pstmtJob.setInt(9, job.getUserId());
+
+            // [เพิ่ม] เช็ค end_date ว่าเป็น null หรือไม่
+            if (job.getEndDate() != null && !job.getEndDate().isEmpty()) {
+                pstmtJob.setString(6, job.getEndDate());
+            } else {
+                pstmtJob.setNull(6, java.sql.Types.TIMESTAMP);
+            }
+
+            pstmtJob.setString(7, job.getImagePath());
+            pstmtJob.setInt(8, job.getVacancies());
+            pstmtJob.setString(9, job.getJobType());
+            pstmtJob.setInt(10, job.getUserId()); // ขยับ index เป็น 10
 
             int affectedRows = pstmtJob.executeUpdate();
 
@@ -44,7 +52,7 @@ public class JobManager {
                 throw new SQLException("Creating job failed, no rows affected.");
             }
 
-            // --- 2. ดึง job_id ที่เพิ่งสร้าง ---
+            // --- 2. ดึง job_id ---
             int newJobId = 0;
             generatedKeys = pstmtJob.getGeneratedKeys();
             if (generatedKeys.next()) {
@@ -53,25 +61,22 @@ public class JobManager {
                 throw new SQLException("Creating job failed, no ID obtained.");
             }
 
-            // --- 3. Insert ลงตาราง PAID_JOBS (ถ้าเป็นงานจ้าง) ---
+            // --- 3. Insert ลงตาราง PAID_JOBS ---
             if ("paid".equalsIgnoreCase(job.getJobType())) {
                 pstmtPaid = conn.prepareStatement(sqlPaid);
-
-                // [แก้ไข 2] ส่งค่า job_id, hour_rate และ user_id ให้ครบ
-                pstmtPaid.setInt(1, newJobId);   // job_id ที่เพิ่งได้มา
-                pstmtPaid.setInt(2, hourRate);   // hour_rate
-                pstmtPaid.setInt(3, job.getUserId()); // user_id
-
+                pstmtPaid.setInt(1, newJobId);
+                pstmtPaid.setInt(2, hourRate);
+                pstmtPaid.setInt(3, job.getUserId());
                 pstmtPaid.executeUpdate();
             }
 
-            conn.commit(); // ยืนยันข้อมูล
+            conn.commit();
             return true;
 
         } catch (SQLException e) {
             if (conn != null) {
                 try {
-                    conn.rollback(); // ย้อนกลับถ้ามีปัญหา
+                    conn.rollback();
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                 }
@@ -93,7 +98,7 @@ public class JobManager {
         }
     }
 
-    // 2. + removeJob()
+    // 2. + removeJob() (เหมือนเดิม)
     public boolean removeJob(int jobId) {
         String sql = "DELETE FROM job WHERE job_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -107,9 +112,9 @@ public class JobManager {
         }
     }
 
+    // 3. + applyJob() (เหมือนเดิม)
     public static boolean applyJob(int job_id, int hoursAmount) {
 
-        // [แก้ไข] SQL ไม่ต้อง Insert title แล้ว
         String sqlJob = "INSERT INTO job_assignment " +
                 "(job_id, std_id, status, assign_at, finished_at, reward_amount, hours_amount) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -143,8 +148,6 @@ public class JobManager {
             pstmt.setObject(6, null);
             pstmt.setInt(7, hoursAmount);
 
-            // ไม่ต้อง set title แล้ว
-
             int rowAffected = pstmt.executeUpdate();
             return rowAffected > 0;
 
@@ -159,6 +162,7 @@ public class JobManager {
         }
     }
 
+    // 4. + isJobApplied() (เหมือนเดิม)
     public static boolean isJobApplied(int jobId) {
         User user = Auth.getAuthUser();
         if (user == null) return false;
@@ -181,7 +185,6 @@ public class JobManager {
             pstmt.setString(2, stdId);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                // ถ้ามีข้อมูล (next() เป็น true) แสดงว่าสมัครไปแล้ว
                 return rs.next();
             }
 
@@ -190,5 +193,4 @@ public class JobManager {
             return false;
         }
     }
-
 }

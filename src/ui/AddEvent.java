@@ -4,14 +4,14 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException; // [เพิ่ม]
-import java.nio.file.Files; // [เพิ่ม]
-import java.nio.file.Path; // [เพิ่ม]
-import java.nio.file.Paths; // [เพิ่ม]
-import java.nio.file.StandardCopyOption; // [เพิ่ม]
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.UUID; // [เพิ่ม]
+import java.util.UUID;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -40,6 +40,12 @@ public class AddEvent extends JFrame {
     private JTextField titleField, vacanciesField, workingHoursField, paymentField;
     private JTextField timeField;
     private JSpinner dateSpinner;
+
+    // [เพิ่ม] Components สำหรับ End Date
+    private JCheckBox chkEndDate;
+    private JSpinner endDateSpinner;
+    private JTextField endTimeField; // เพิ่ม time field
+
     private JTextArea locationField, detailsArea;
     private JLabel previewText;
     private JLabel previewImage;
@@ -66,7 +72,7 @@ public class AddEvent extends JFrame {
 
     private void initialize() {
         setTitle("Add New Event");
-        setSize(1000, 700);
+        setSize(1000, 750); // [ปรับ] เพิ่มความสูงเล็กน้อยเผื่อพื้นที่
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
@@ -91,12 +97,18 @@ public class AddEvent extends JFrame {
 
         // --- Left Panel ---
         JPanel formPanel = createFormPanel();
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.6; gbc.weighty = 1.0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.6;
+        gbc.weighty = 1.0;
         mainContent.add(formPanel, gbc);
 
         // --- Right Panel ---
         JPanel sidePanel = createSidePanel();
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 0.4; gbc.weighty = 1.0;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 0.4;
+        gbc.weighty = 1.0;
         mainContent.add(sidePanel, gbc);
 
         // --- Bottom Panel ---
@@ -124,15 +136,17 @@ public class AddEvent extends JFrame {
                 return;
             }
 
-            // รวมวันที่และเวลา
+            // รวมวันที่และเวลา (Start Date)
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
             try {
                 Date date = (Date) dateSpinner.getValue();
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
                 String dateStr = dateFormat.format(date);
 
                 String timeStr = timeField.getText().trim();
-                if (timeStr.isEmpty()) timeStr = "00:00:00";
-                if (timeStr.length() == 5) timeStr += ":00";
+                if (timeStr.isEmpty())
+                    timeStr = "00:00:00";
+                if (timeStr.length() == 5)
+                    timeStr += ":00";
 
                 newJob.setDateTime(dateStr + " " + timeStr);
 
@@ -140,13 +154,33 @@ public class AddEvent extends JFrame {
                 newJob.setDateTime("2025-01-01 00:00:00");
             }
 
-            // [แก้ไขส่วนนี้] จัดการบันทึกรูปภาพลงโฟลเดอร์
+            // [เพิ่ม] End Date Logic
+            if (chkEndDate.isSelected()) {
+                try {
+                    Date endDate = (Date) endDateSpinner.getValue();
+                    String endDateStr = dateFormat.format(endDate);
+
+                    // ดึงเวลาสิ้นสุดจาก endTimeField
+                    String endTimeStr = endTimeField.getText().trim();
+                    if (endTimeStr.isEmpty())
+                        endTimeStr = "23:59:59";
+                    if (endTimeStr.length() == 5)
+                        endTimeStr += ":00";
+
+                    newJob.setEndDate(endDateStr + " " + endTimeStr);
+                } catch (Exception ex) {
+                    newJob.setEndDate(null);
+                }
+            } else {
+                newJob.setEndDate(null);
+            }
+
+            // จัดการบันทึกรูปภาพ
             if (selectedImageFile != null) {
                 String savedPath = saveImageToProject(selectedImageFile);
                 if (savedPath != null) {
                     newJob.setImagePath(savedPath);
                 } else {
-                    // กรณี save ไม่ผ่าน อาจจะใส่ path default หรือ null
                     newJob.setImagePath(null);
                 }
             } else {
@@ -154,12 +188,10 @@ public class AddEvent extends JFrame {
             }
 
             newJob.setJobType(noButton.isSelected() ? "volunteer" : "paid");
-            // เช็ค service.Auth ให้แน่ใจว่า import ถูกต้องและ login แล้ว
-            // ถ้ายังไม่ได้ทำระบบ login อาจจะ hardcode userId ไปก่อนได้ เช่น 1
+
             if (service.Auth.getAuthUser() != null) {
                 newJob.setUserId(service.Auth.getAuthUser().getId());
             } else {
-                // Fallback กรณีเทสแบบไม่ Login
                 newJob.setUserId(1);
             }
 
@@ -172,11 +204,12 @@ public class AddEvent extends JFrame {
                 }
             }
 
+            // ต้องมั่นใจว่า JobManager และ JobEntity รองรับ endDate แล้ว
             boolean success = jobManager.addJob(newJob, hourRate);
 
             if (success) {
                 JOptionPane.showMessageDialog(this, "โพสต์งานสำเร็จ!");
-                clearForm(); // ล้างฟอร์มหลังโพสต์เสร็จ
+                clearForm();
             } else {
                 JOptionPane.showMessageDialog(this, "เกิดข้อผิดพลาดในการบันทึก");
             }
@@ -203,7 +236,9 @@ public class AddEvent extends JFrame {
         JLabel header = new JLabel("Event Details");
         header.setFont(new Font("SansSerif", Font.BOLD, 22));
         header.setForeground(TEXT_COLOR);
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
         panel.add(header, gbc);
 
         gbc.gridwidth = 1;
@@ -217,9 +252,11 @@ public class AddEvent extends JFrame {
         ((AbstractDocument) vacanciesField.getDocument()).setDocumentFilter(new NumericDocumentFilter());
         addLabelAndInput(panel, "Vacancies :", vacanciesField, gbc, row++);
 
-        // Date & Time
-        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
-        panel.add(createLabel("Date & Time :"), gbc);
+        // Start Date & Time
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        panel.add(createLabel("Start Date :"), gbc);
 
         JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         dateTimePanel.setOpaque(false);
@@ -231,13 +268,58 @@ public class AddEvent extends JFrame {
 
         timeField = createTextField();
         timeField.setPreferredSize(new Dimension(80, 35));
+        timeField.setToolTipText("HH:MM");
 
         dateTimePanel.add(dateSpinner);
         dateTimePanel.add(Box.createHorizontalStrut(10));
         dateTimePanel.add(timeField);
 
-        gbc.gridx = 1; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
         panel.add(dateTimePanel, gbc);
+        row++;
+
+        // [เพิ่ม] End Date (Optional)
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        panel.add(createLabel("End Date :"), gbc);
+
+        JPanel endDatePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        endDatePanel.setOpaque(false);
+
+        chkEndDate = new JCheckBox("Specify");
+        chkEndDate.setOpaque(false);
+        chkEndDate.setFont(INPUT_FONT);
+
+        endDateSpinner = new JSpinner(new SpinnerDateModel());
+        endDateSpinner.setEditor(new JSpinner.DateEditor(endDateSpinner, "dd/MM/yyyy"));
+        endDateSpinner.setPreferredSize(new Dimension(120, 35));
+        endDateSpinner.setFont(INPUT_FONT);
+        endDateSpinner.setEnabled(false);
+
+        // เพิ่ม time field สำหรับ end date
+        endTimeField = createTextField();
+        endTimeField.setPreferredSize(new Dimension(80, 35));
+        endTimeField.setToolTipText("HH:MM");
+        endTimeField.setEnabled(false);
+        endTimeField.setText("23:59");
+
+        chkEndDate.addActionListener(e -> {
+            endDateSpinner.setEnabled(chkEndDate.isSelected());
+            endTimeField.setEnabled(chkEndDate.isSelected());
+            updatePreview();
+        });
+
+        endDatePanel.add(chkEndDate);
+        endDatePanel.add(Box.createHorizontalStrut(10));
+        endDatePanel.add(endDateSpinner);
+        endDatePanel.add(Box.createHorizontalStrut(5));
+        endDatePanel.add(endTimeField);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        panel.add(endDatePanel, gbc);
         row++;
 
         // Location
@@ -252,7 +334,9 @@ public class AddEvent extends JFrame {
         addLabelAndInput(panel, "Working Hours :", workingHoursField, gbc, row++);
 
         // Payment
-        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
         panel.add(createLabel("Payment :"), gbc);
 
         JPanel paymentPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
@@ -283,7 +367,8 @@ public class AddEvent extends JFrame {
         paymentPanel.add(paymentField);
         paymentPanel.add(lblBaht);
 
-        gbc.gridx = 1; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
         panel.add(paymentPanel, gbc);
 
         yesButton.addActionListener(e -> togglePayment(true));
@@ -342,8 +427,7 @@ public class AddEvent extends JFrame {
         previewCard.setBackground(Color.WHITE);
         previewCard.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(new Color(220, 220, 220), 1, true),
-                new EmptyBorder(15, 15, 15, 15)
-        ));
+                new EmptyBorder(15, 15, 15, 15)));
         previewCard.setMaximumSize(new Dimension(350, 400));
         previewCard.setPreferredSize(new Dimension(300, 250));
 
@@ -390,16 +474,23 @@ public class AddEvent extends JFrame {
     // --- Helper Methods ---
 
     private void addLabelAndInput(JPanel panel, String labelText, JComponent input, GridBagConstraints gbc, int row) {
-        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
         panel.add(createLabel(labelText), gbc);
-        gbc.gridx = 1; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
         panel.add(input, gbc);
     }
 
-    private void addLabelAndComponent(JPanel panel, String labelText, JComponent comp, GridBagConstraints gbc, int row) {
-        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+    private void addLabelAndComponent(JPanel panel, String labelText, JComponent comp, GridBagConstraints gbc,
+            int row) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
         panel.add(createLabel(labelText), gbc);
-        gbc.gridx = 1; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel.add(comp, gbc);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -417,8 +508,7 @@ public class AddEvent extends JFrame {
         field.setFont(INPUT_FONT);
         field.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(new Color(200, 200, 200), 1, true),
-                new EmptyBorder(8, 10, 8, 10)
-        ));
+                new EmptyBorder(8, 10, 8, 10)));
         return field;
     }
 
@@ -481,6 +571,13 @@ public class AddEvent extends JFrame {
         imageLabel.setText("No Image");
         previewImage.setIcon(null);
         selectedImageFile = null;
+
+        // [เพิ่ม] Reset End Date
+        chkEndDate.setSelected(false);
+        endDateSpinner.setEnabled(false);
+        endTimeField.setEnabled(false);
+        endTimeField.setText("23:59");
+
         updatePreview();
     }
 
@@ -512,9 +609,17 @@ public class AddEvent extends JFrame {
 
     private void setupLivePreview() {
         DocumentListener listener = new DocumentListener() {
-            public void changedUpdate(DocumentEvent e) { updatePreview(); }
-            public void removeUpdate(DocumentEvent e) { updatePreview(); }
-            public void insertUpdate(DocumentEvent e) { updatePreview(); }
+            public void changedUpdate(DocumentEvent e) {
+                updatePreview();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                updatePreview();
+            }
+
+            public void insertUpdate(DocumentEvent e) {
+                updatePreview();
+            }
         };
 
         titleField.getDocument().addDocumentListener(listener);
@@ -525,6 +630,9 @@ public class AddEvent extends JFrame {
         timeField.getDocument().addDocumentListener(listener);
 
         dateSpinner.addChangeListener(e -> updatePreview());
+        // [เพิ่ม] Listener สำหรับ End Date
+        endDateSpinner.addChangeListener(e -> updatePreview());
+        endTimeField.getDocument().addDocumentListener(listener);
 
         updatePreview();
     }
@@ -534,6 +642,13 @@ public class AddEvent extends JFrame {
         String dateText = dateEditor.getTextField().getText();
         String timeText = timeField.getText();
 
+        // [เพิ่ม] Logic แสดง End Date ในพรีวิว
+        String endDateText = "";
+        if (chkEndDate.isSelected()) {
+            JSpinner.DateEditor endDateEditor = (JSpinner.DateEditor) endDateSpinner.getEditor();
+            endDateText = " - " + endDateEditor.getTextField().getText() + " " + endTimeField.getText();
+        }
+
         String paymentText = noButton.isSelected() ? "Unpaid" : paymentField.getText() + " Baht/hr";
 
         String html = "<html><body style='width:160px; font-family:SansSerif;'>"
@@ -541,43 +656,40 @@ public class AddEvent extends JFrame {
                 + (titleField.getText().isEmpty() ? "(Event Title)" : titleField.getText()) + "</h3>"
                 + "<div style='font-size:10px; color:#555;'>"
                 + "<b>Vacancies:</b> " + vacanciesField.getText() + "<br>"
-                + "<b>Date:</b> " + dateText + "<br>"
+                + "<b>Date:</b> " + dateText + endDateText + "<br>" // แสดงวันสิ้นสุด
                 + "<b>Time:</b> " + timeText + "<br>"
                 + "<b>Loc:</b> " + locationField.getText().replace("\n", " ") + "<br>"
                 + "<b>Hours:</b> " + workingHoursField.getText() + "<br>"
-                + "<b>Pay:</b> <span style='color:" + (noButton.isSelected() ? "red" : "green") + ";'>" + paymentText + "</span>"
+                + "<b>Pay:</b> <span style='color:" + (noButton.isSelected() ? "red" : "green") + ";'>" + paymentText
+                + "</span>"
                 + "</div></body></html>";
 
         previewText.setText(html);
     }
 
-    // [เพิ่มใหม่] ฟังก์ชันสำหรับบันทึกรูปภาพลงในโปรเจกต์
     private String saveImageToProject(File sourceFile) {
-        if (sourceFile == null) return null;
+        if (sourceFile == null)
+            return null;
 
         try {
-            // 1. สร้างโฟลเดอร์ user_images ถ้ายังไม่มี
             String destDir = "user_images";
             File folder = new File(destDir);
             if (!folder.exists()) {
                 folder.mkdirs();
             }
 
-            // 2. ตั้งชื่อไฟล์ใหม่ด้วย UUID เพื่อป้องกันชื่อซ้ำ
             String originalName = sourceFile.getName();
             String extension = "";
             int i = originalName.lastIndexOf('.');
             if (i > 0) {
-                extension = originalName.substring(i); // .jpg, .png
+                extension = originalName.substring(i);
             }
             String newFileName = UUID.randomUUID().toString() + extension;
 
-            // 3. ทำการ Copy ไฟล์
             Path sourcePath = sourceFile.toPath();
             Path destPath = Paths.get(destDir, newFileName);
             Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
 
-            // 4. คืนค่า Path ที่จะเก็บลง DB
             return destDir + "/" + newFileName;
 
         } catch (IOException e) {
@@ -589,12 +701,17 @@ public class AddEvent extends JFrame {
 
     static class NumericDocumentFilter extends DocumentFilter {
         @Override
-        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
-            if (string != null && string.matches("\\d*")) super.insertString(fb, offset, string, attr);
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                throws BadLocationException {
+            if (string != null && string.matches("\\d*"))
+                super.insertString(fb, offset, string, attr);
         }
+
         @Override
-        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
-            if (text != null && text.matches("\\d*")) super.replace(fb, offset, length, text, attrs);
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                throws BadLocationException {
+            if (text != null && text.matches("\\d*"))
+                super.replace(fb, offset, length, text, attrs);
         }
     }
 }

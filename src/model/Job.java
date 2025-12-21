@@ -2,7 +2,7 @@ package model;
 
 public interface Job {
 
-    int getJobId(); // เปลี่ยนเป็น int
+    int getJobId();
     void setJobId(int jobId);
 
     String getTitle();
@@ -20,6 +20,10 @@ public interface Job {
     String getDateTime();
     void setDateTime(String dateTime);
 
+    // [เพิ่ม] สำหรับ End Date
+    String getEndDate();
+    void setEndDate(String endDate);
+
     int getVacancies();
     void setVacancies(int vacancies);
 
@@ -29,7 +33,6 @@ public interface Job {
     String getImagePath();
     void setImagePath(String imagePath);
 
-    // เพิ่ม method นี้เพราะใน JobManager มีการเรียกใช้
     int getUserId();
     void setUserId(int userId);
 }

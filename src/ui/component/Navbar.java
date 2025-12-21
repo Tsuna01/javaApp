@@ -3,6 +3,7 @@ package ui.component;
 import model.Profiles;
 import service.API;
 import service.Auth;
+import service.CompletedAssignment;
 import ui.*;
 
 import javax.imageio.ImageIO;
@@ -76,8 +77,8 @@ public class Navbar {
                 // เปิดหน้า ProfileEditor (หรือ Profile)
                 new Profile().setVisible(true);
 
-                // หมายเหตุ: Navbar ส่วนใหญ่จะไม่ปิดหน้าต่างหลักทิ้งเมื่อกดแค่ Avatar
-                // แต่ถ้าต้องการปิดก็ตามโค้ดเดิมได้เลยครับ
+                CompletedAssignment com = new CompletedAssignment();
+
                 Window window = SwingUtilities.getWindowAncestor(avatar);
                 if (window != null) {
                     window.dispose();

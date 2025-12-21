@@ -10,8 +10,9 @@ import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
 import service.API;
-import service.Auth; // เรียกใช้ Auth
-import service.JobManager; // เรียกใช้ JobManager ที่เพิ่งแก้
+import service.Auth;
+import service.JobManager;
+import service.WorkerManager;
 import ui.component.Navbar;
 
 public class DetailJob extends JFrame {
@@ -123,22 +124,28 @@ public class DetailJob extends JFrame {
         String workingHours = "";
         String vacancies = "";
         String imagePath = null;
-        int hoursInt = 0; // เก็บค่าชั่วโมงไว้ใช้ตอนสมัคร
+        String endDate = ""; // เพิ่ม endDate
+        int hoursInt = 0;
 
         if (job != null && !job.isEmpty()) {
             for (API i : job) {
-                data.add(i.title);      // 0
-                data.add(i.dateTime);   // 1
-                data.add(i.location);   // 2
+                data.add(i.title); // 0
+                data.add(i.dateTime); // 1
+                data.add(i.location); // 2
                 workingHours = String.valueOf(i.workingHours);
-                hoursInt = i.workingHours; // เก็บค่า int ไว้
-                data.add(i.details);    // 3
+                hoursInt = i.workingHours;
+                data.add(i.details); // 3
                 vacancies = String.valueOf(i.vacancies);
-                data.add(i.jobType);    // 4
+                data.add(i.jobType); // 4
                 imagePath = i.imagePath;
+                endDate = i.endDate != null ? i.endDate : ""; // ดึง endDate
             }
         } else {
-            data.add("No Title"); data.add("2025-01-01 00:00:00"); data.add("-"); data.add("-"); data.add("-");
+            data.add("No Title");
+            data.add("2025-01-01 00:00:00");
+            data.add("-");
+            data.add("-");
+            data.add("-");
         }
 
         ImageIcon icon = loadAndResizeImage(imagePath, 250, 300);
@@ -166,32 +173,70 @@ public class DetailJob extends JFrame {
             if (dayD.length >= 1) {
                 String[] dateParts = dayD[0].split("-");
                 if (dateParts.length >= 3) {
-                    YYYY = dateParts[0]; MM_Num = dateParts[1]; DD = dateParts[2];
+                    YYYY = dateParts[0];
+                    MM_Num = dateParts[1];
+                    DD = dateParts[2];
                 }
             }
             if (dayD.length >= 2) {
                 String[] timeParts = dayD[1].split(":");
                 if (timeParts.length >= 2) {
-                    HH = timeParts[0]; MIN = timeParts[1];
+                    HH = timeParts[0];
+                    MIN = timeParts[1];
                 }
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
 
         String MM_Text;
         switch (MM_Num) {
-            case "1": case "01": MM_Text = "มกราคม"; break;
-            case "2": case "02": MM_Text = "กุมภาพันธ์"; break;
-            case "3": case "03": MM_Text = "มีนาคม"; break;
-            case "4": case "04": MM_Text = "เมษายน"; break;
-            case "5": case "05": MM_Text = "พฤษภาคม"; break;
-            case "6": case "06": MM_Text = "มิถุนายน"; break;
-            case "7": case "07": MM_Text = "กรกฎาคม"; break;
-            case "8": case "08": MM_Text = "สิงหาคม"; break;
-            case "9": case "09": MM_Text = "กันยายน"; break;
-            case "10": MM_Text = "ตุลาคม"; break;
-            case "11": MM_Text = "พฤศจิกายน"; break;
-            case "12": MM_Text = "ธันวาคม"; break;
-            default: MM_Text = "ไม่ทราบเดือน";
+            case "1":
+            case "01":
+                MM_Text = "มกราคม";
+                break;
+            case "2":
+            case "02":
+                MM_Text = "กุมภาพันธ์";
+                break;
+            case "3":
+            case "03":
+                MM_Text = "มีนาคม";
+                break;
+            case "4":
+            case "04":
+                MM_Text = "เมษายน";
+                break;
+            case "5":
+            case "05":
+                MM_Text = "พฤษภาคม";
+                break;
+            case "6":
+            case "06":
+                MM_Text = "มิถุนายน";
+                break;
+            case "7":
+            case "07":
+                MM_Text = "กรกฎาคม";
+                break;
+            case "8":
+            case "08":
+                MM_Text = "สิงหาคม";
+                break;
+            case "9":
+            case "09":
+                MM_Text = "กันยายน";
+                break;
+            case "10":
+                MM_Text = "ตุลาคม";
+                break;
+            case "11":
+                MM_Text = "พฤศจิกายน";
+                break;
+            case "12":
+                MM_Text = "ธันวาคม";
+                break;
+            default:
+                MM_Text = "ไม่ทราบเดือน";
         }
 
         String typeRaw = (data.size() > 4) ? data.get(4) : "";
@@ -208,12 +253,17 @@ public class DetailJob extends JFrame {
         title.setFont(FONT_TITLE);
 
         JLabel date = new JLabel(
-                "<html><font color='#FFD700'>☀</font> วันที่: "
+                "<html><font color='#FFD700'>☀</font> วันเริ่ม: "
                         + DD + " " + MM_Text + " " + YYYY
                         + "<br>&nbsp;&nbsp;&nbsp;เวลา "
-                        + HH + ":" + MIN + " น.</html>"
-        );
+                        + HH + ":" + MIN + " น.</html>");
         date.setFont(FONT_TEXT);
+
+        // แสดงวันสิ้นสุด
+        String endDateDisplay = (endDate != null && !endDate.isEmpty()) ? endDate : "-";
+        JLabel endDateLabel = new JLabel(
+                "<html><font color='#4CAF50'>🏁</font> วันสิ้นสุด: " + endDateDisplay + "</html>");
+        endDateLabel.setFont(FONT_TEXT);
 
         JLabel loc = new JLabel("<html><font color='red'>📍</font> " + data.get(2) + "</html>");
         loc.setFont(FONT_TEXT);
@@ -230,6 +280,8 @@ public class DetailJob extends JFrame {
         details.add(title);
         details.add(Box.createVerticalStrut(10));
         details.add(date);
+        details.add(Box.createVerticalStrut(5));
+        details.add(endDateLabel);
         details.add(Box.createVerticalStrut(8));
         details.add(loc);
         details.add(Box.createVerticalStrut(8));
@@ -278,55 +330,87 @@ public class DetailJob extends JFrame {
             btnPanel.add(appliedBtn);
 
         } else {
-            // [กรณีเนังไม่สมัคร] แสดงปุ่ม Accept ปกติ
-            JButton acceptBtn = new JButton("Accept Job") {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    GradientPaint gp = new GradientPaint(0, 0, new Color(255, 160, 160),
-                            getWidth(), 0, new Color(255, 200, 150));
-                    g2.setPaint(gp);
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
-                    super.paintComponent(g2);
-                    g2.dispose();
-                }
-            };
-            acceptBtn.setFont(FONT_BTN);
-            acceptBtn.setForeground(Color.WHITE);
-            acceptBtn.setContentAreaFilled(false);
-            acceptBtn.setBorderPainted(false);
-            acceptBtn.setPreferredSize(new Dimension(200, 45));
-            acceptBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            // เช็คว่างานเต็มหรือยัง
+            int currentWorkers = WorkerManager.getCurrentWorkerCount(Integer.parseInt(this.jobid));
+            int maxVacancies = 0;
+            try {
+                maxVacancies = Integer.parseInt(vacancies);
+            } catch (Exception ex) {
+            }
+            boolean isFull = currentWorkers >= maxVacancies;
 
-            int finalHoursInt = hoursInt; // ต้องเป็น final สำหรับ lambda
-            acceptBtn.addActionListener(e -> {
-                int confirm = JOptionPane.showConfirmDialog(this,
-                        "คุณต้องการรับงานนี้ใช่หรือไม่?",
-                        "ยืนยันการรับงาน",
-                        JOptionPane.YES_NO_OPTION);
-
-                if (confirm == JOptionPane.YES_OPTION) {
-                    try {
-                        int id = Integer.parseInt(this.jobid);
-                        boolean success = JobManager.applyJob(id, finalHoursInt); // ใช้ค่าชั่วโมงที่ดึงมา
-
-                        if (success) {
-                            JOptionPane.showMessageDialog(this, "รับงานสำเร็จ! (Applied Successfully)");
-                            new AvailableJob().setVisible(true);
-                            dispose();
-                        } else {
-                            JOptionPane.showMessageDialog(this, "ไม่สามารถรับงานได้ (อาจเกิดข้อผิดพลาด)",
-                                    "Error", JOptionPane.ERROR_MESSAGE);
-                        }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error", JOptionPane.ERROR_MESSAGE);
+            if (isFull) {
+                // [กรณีงานเต็ม] แสดงปุ่ม Disabled บอกว่าเต็มแล้ว
+                JButton fullBtn = new JButton("งานเต็มแล้ว (" + currentWorkers + "/" + maxVacancies + ")") {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(Color.LIGHT_GRAY);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                        super.paintComponent(g2);
+                        g2.dispose();
                     }
-                }
-            });
+                };
+                fullBtn.setFont(FONT_BTN);
+                fullBtn.setForeground(Color.DARK_GRAY);
+                fullBtn.setContentAreaFilled(false);
+                fullBtn.setBorderPainted(false);
+                fullBtn.setPreferredSize(new Dimension(250, 45));
+                fullBtn.setEnabled(false);
+                btnPanel.add(fullBtn);
+            } else {
+                // [กรณียังไม่เต็ม] แสดงปุ่ม Accept ปกติ
+                JButton acceptBtn = new JButton("Accept Job") {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        GradientPaint gp = new GradientPaint(0, 0, new Color(255, 160, 160),
+                                getWidth(), 0, new Color(255, 200, 150));
+                        g2.setPaint(gp);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                        super.paintComponent(g2);
+                        g2.dispose();
+                    }
+                };
+                acceptBtn.setFont(FONT_BTN);
+                acceptBtn.setForeground(Color.WHITE);
+                acceptBtn.setContentAreaFilled(false);
+                acceptBtn.setBorderPainted(false);
+                acceptBtn.setPreferredSize(new Dimension(200, 45));
+                acceptBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            btnPanel.add(acceptBtn);
+                int finalHoursInt = hoursInt;
+                acceptBtn.addActionListener(e -> {
+                    int confirm = JOptionPane.showConfirmDialog(this,
+                            "คุณต้องการรับงานนี้ใช่หรือไม่?",
+                            "ยืนยันการรับงาน",
+                            JOptionPane.YES_NO_OPTION);
+
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        try {
+                            int id = Integer.parseInt(this.jobid);
+                            boolean success = JobManager.applyJob(id, finalHoursInt);
+
+                            if (success) {
+                                JOptionPane.showMessageDialog(this, "รับงานสำเร็จ! (Applied Successfully)");
+                                new AvailableJob().setVisible(true);
+                                dispose();
+                            } else {
+                                JOptionPane.showMessageDialog(this, "ไม่สามารถรับงานได้ (อาจเกิดข้อผิดพลาด)",
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error",
+                                    JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                });
+
+                btnPanel.add(acceptBtn);
+            }
         }
 
         rightPanel.add(btnPanel, BorderLayout.SOUTH);
@@ -352,14 +436,16 @@ public class DetailJob extends JFrame {
                     originalImage = ImageIO.read(f);
                 } else {
                     File retry = new File("user_images/" + imagePath);
-                    if (retry.exists()) originalImage = ImageIO.read(retry);
+                    if (retry.exists())
+                        originalImage = ImageIO.read(retry);
                 }
             }
             if (originalImage != null) {
                 Image scaledImage = originalImage.getScaledInstance(width, height, Image.SCALE_SMOOTH);
                 return new ImageIcon(scaledImage);
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
         return new ImageIcon(createPlaceholderImage(width, new Color(139, 69, 19)));
     }
 

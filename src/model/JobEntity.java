@@ -2,30 +2,35 @@ package model;
 
 public class JobEntity implements Job {
 
-    private int jobId; // เปลี่ยนเป็น int
+    private int jobId;
     private String title;
     private String details;
     private String location;
     private int workingHours;
     private String dateTime;
+    private String endDate; // [เพิ่ม] field นี้
     private int vacancies;
     private String jobType;
     private String imagePath;
-    private int userId; // เพิ่ม field userId
+    private int userId;
 
-    // ===== Constructor =====
+    // ===== Constructor (Empty) =====
     public JobEntity() {
     }
 
+    // ===== Constructor (Full) =====
+    // [แก้ไข] เพิ่ม endDate เข้ามาใน Parameter
     public JobEntity(int jobId, String title, String details,
                      String location, int workingHours,
-                     String dateTime, int vacancies, String jobType, String imagePath, int userId) {
+                     String dateTime, String endDate, int vacancies,
+                     String jobType, String imagePath, int userId) {
         this.jobId = jobId;
         this.title = title;
         this.details = details;
         this.location = location;
         this.workingHours = workingHours;
         this.dateTime = dateTime;
+        this.endDate = endDate; // [เพิ่ม]
         this.vacancies = vacancies;
         this.jobType = jobType;
         this.imagePath = imagePath;
@@ -68,6 +73,13 @@ public class JobEntity implements Job {
     @Override
     public void setDateTime(String dateTime) { this.dateTime = dateTime; }
 
+    // [เพิ่ม] Getter/Setter สำหรับ End Date
+    @Override
+    public String getEndDate() { return endDate; }
+
+    @Override
+    public void setEndDate(String endDate) { this.endDate = endDate; }
+
     @Override
     public int getVacancies() { return vacancies; }
 
@@ -81,14 +93,14 @@ public class JobEntity implements Job {
     public void setJobType(String jobType) { this.jobType = jobType; }
 
     @Override
-    public String getImagePath() { return imagePath; } // เพิ่ม Getter
+    public String getImagePath() { return imagePath; }
 
     @Override
     public void setImagePath(String imagePath){ this.imagePath = imagePath; }
 
     @Override
-    public int getUserId() { return userId; } // เพิ่ม Getter
+    public int getUserId() { return userId; }
 
     @Override
-    public void setUserId(int userId) { this.userId = userId; } // เพิ่ม Setter
+    public void setUserId(int userId) { this.userId = userId; }
 }

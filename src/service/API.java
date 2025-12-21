@@ -12,19 +12,21 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class API {
-    // ... (ส่วนของตัวแปรและ getJobs, getJobDetail คงเดิม) ...
+ 
     public String jobId;
     public String title;
     public String details;
     public String location;
     public int workingHours;
     public String dateTime;
+    public String endDate;
     public int vacancies;
+    public String status;
     public String jobType;
     public String imagePath;
 
     public static ArrayList<API> getJobs() {
-        // ... (โค้ดเดิมของคุณสำหรับดึงงานทั้งหมด) ...
+        
         ArrayList<API> list = new ArrayList<>();
         String sql = "SELECT * FROM job";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -38,8 +40,10 @@ public class API {
                 job.location = rs.getString("location");
                 job.workingHours = rs.getInt("workingHours");
                 job.dateTime = rs.getString("dateTime");
+                job.endDate = rs.getString("end_date");
                 job.vacancies = rs.getInt("vacancies");
                 job.jobType = rs.getString("job_type");
+                job.status = rs.getString("status");
                 job.imagePath = rs.getString("imagePath");
                 list.add(job);
             }
@@ -65,6 +69,7 @@ public class API {
                     job.location = rs.getString("location");
                     job.workingHours = rs.getInt("workingHours");
                     job.dateTime = rs.getString("dateTime");
+                    job.endDate = rs.getString("end_date");
                     job.vacancies = rs.getInt("vacancies");
                     job.jobType = rs.getString("job_type");
                     job.imagePath = rs.getString("imagePath");
@@ -122,7 +127,6 @@ public class API {
         return list;
     }
 
-    // ... (method getProfile, saveProfile คงเดิม) ...
     public static ArrayList<Profiles> getProfile(int userId) {
         ArrayList<Profiles> list = new ArrayList<>();
         String sql = "SELECT * FROM profile WHERE user_id = ?"; // เช็คชื่อตาราง profile/profiles
@@ -136,6 +140,7 @@ public class API {
                     profile.setUserId(rs.getInt("user_id"));
                     profile.setBio(rs.getString("bio"));
                     profile.setImagePath(rs.getString("image_path"));
+
                     list.add(profile);
                 }
             }
@@ -148,7 +153,6 @@ public class API {
     public static ArrayList<API> getHistoryJobAdmin(int user_id) {
         ArrayList<API> list = new ArrayList<>();
         String sql = "SELECT * FROM job WHERE user_id = ?";
-        System.out.println("DEBUG API: Executing query: " + sql + " with user_id: " + user_id);
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, user_id);
@@ -161,14 +165,16 @@ public class API {
                     job.location = rs.getString("location");
                     job.workingHours = rs.getInt("workingHours");
                     job.dateTime = rs.getString("dateTime");
+                    job.endDate = rs.getString("end_date");
+                    job.status = rs.getString("status");
                     job.vacancies = rs.getInt("vacancies");
                     job.jobType = rs.getString("job_type");
                     job.imagePath = rs.getString("imagePath");
                     list.add(job);
-                    System.out.println("DEBUG API: Added job - " + job.title);
+
                 }
             }
-            System.out.println("DEBUG API: Total jobs fetched: " + list.size());
+
         } catch (SQLException e) {
             System.err.println("ERROR in getHistoryJobAdmin: " + e.getMessage());
             e.printStackTrace();
@@ -208,53 +214,6 @@ public class API {
             e.printStackTrace();
             return false;
         }
-    }
-
-    // Inner class to hold worker info
-    public static class WorkerInfo {
-        public String stdId;
-        public String name;
-        public String status;
-        public String assignAt;
-
-        public WorkerInfo(String stdId, String name, String status, String assignAt) {
-            this.stdId = stdId;
-            this.name = name;
-            this.status = status;
-            this.assignAt = assignAt;
-        }
-    }
-
-    // Get workers assigned to a specific job
-    public static ArrayList<WorkerInfo> getJobWorkers(int jobId) {
-        ArrayList<WorkerInfo> list = new ArrayList<>();
-        String sql = "SELECT ja.std_id, ja.status, ja.assign_at, u.name " +
-                "FROM job_assignment ja " +
-                "LEFT JOIN user u ON ja.std_id = u.std_id " +
-                "WHERE ja.job_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, jobId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    String stdId = rs.getString("std_id");
-                    String name = rs.getString("name");
-                    String status = rs.getString("status");
-                    String assignAt = rs.getString("assign_at");
-
-                    // Use std_id as name if name is null
-                    if (name == null || name.trim().isEmpty()) {
-                        name = "Student " + stdId;
-                    }
-
-                    list.add(new WorkerInfo(stdId, name, status, assignAt));
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("ERROR in getJobWorkers: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return list;
     }
 
 }

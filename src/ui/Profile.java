@@ -15,6 +15,7 @@ import model.Profiles;
 import service.API;
 import service.Auth;
 import service.Student;
+import service.WorkerManager;
 import ui.component.Navbar;
 
 public class Profile extends JFrame {
@@ -28,6 +29,12 @@ public class Profile extends JFrame {
     public String txtIdUser;
     public String txtEmail = (Auth.getAuthUser() != null) ? Auth.getAuthUser().getEmail() : "";
 
+    // For viewing another user's profile
+    private int targetUserId = -1;
+    private String targetStdId = null;
+    private boolean isViewingOther = false;
+    private boolean isMinimalMode = false; // Hide navbar and buttons when true
+
     // Fonts
     private static final Font FONT_NAME = new Font("SansSerif", Font.BOLD, 28);
     private static final Font FONT_ID = new Font("SansSerif", Font.PLAIN, 14);
@@ -36,6 +43,28 @@ public class Profile extends JFrame {
     private static final Font FONT_BIO = new Font("Tahoma", Font.PLAIN, 14); // ปรับลดขนาดลงเล็กน้อยให้อ่านง่าย
 
     public Profile() {
+        initialize();
+    }
+
+    // Constructor for viewing another user's profile by stdId
+    public Profile(String stdId) {
+        this(stdId, false);
+    }
+
+    // Constructor with minimal mode option (hides navbar and buttons)
+    public Profile(String stdId, boolean minimalMode) {
+        this.targetStdId = stdId;
+        this.targetUserId = WorkerManager.getUserIdByStdId(stdId);
+        this.isViewingOther = true;
+        this.isMinimalMode = minimalMode;
+
+        // Get the target user's info
+        String targetName = WorkerManager.getStudentName(stdId);
+        this.nameUser = (targetName != null) ? targetName : "Unknown User";
+        this.statusUser = "student";
+        this.txtIdUser = stdId;
+        this.txtEmail = ""; // Email not publicly shown for other users
+
         initialize();
     }
 
@@ -52,7 +81,10 @@ public class Profile extends JFrame {
         add(mainPanel, BorderLayout.CENTER);
 
         // ========= HEADER ==========
-        mainPanel.add(new Navbar().build(), BorderLayout.NORTH);
+        // Only show navbar if not in minimal mode
+        if (!isMinimalMode) {
+            mainPanel.add(new Navbar().build(), BorderLayout.NORTH);
+        }
 
         // ========= BODY ==========
         JPanel body = new JPanel(new BorderLayout());
@@ -98,9 +130,10 @@ public class Profile extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.insets = new Insets(10, 20, 10, 20);
 
-        // 1. Prepare Data
-        String userIdForQuery = String.valueOf(Auth.getAuthUser().getId());
-        ArrayList<Profiles> profiles = API.getProfile(Auth.getAuthUser().getId());
+        // 1. Prepare Data - use targetUserId if viewing other's profile
+        int userIdForQuery = isViewingOther ? targetUserId
+                : (Auth.getAuthUser() != null ? Auth.getAuthUser().getId() : -1);
+        ArrayList<Profiles> profiles = API.getProfile(userIdForQuery);
         String imagePath = null;
         String bioTextContent = "No comment 101"; // Default Bio
 
@@ -112,21 +145,26 @@ public class Profile extends JFrame {
             }
         }
 
-        if (statusUser.equals("admin")) {
+        if (isViewingOther) {
+            txtStatusUser = "นักศึกษา";
+            // txtIdUser already set in constructor
+        } else if (statusUser.equals("admin")) {
             txtStatusUser = "ผู้ดูแลระบบ";
-            txtIdUser = userIdForQuery;
+            txtIdUser = String.valueOf(userIdForQuery);
         } else {
             txtStatusUser = "นักศึกษา";
             if (Auth.getAuthUser() instanceof Student) {
                 Student s = (Student) Auth.getAuthUser();
                 txtIdUser = s.getStdId();
             } else {
-                txtIdUser = userIdForQuery;
+                txtIdUser = String.valueOf(userIdForQuery);
             }
         }
 
         // --- Left: Avatar ---
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridheight = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridheight = 2;
         gbc.weightx = 0;
         gbc.anchor = GridBagConstraints.NORTHWEST;
 
@@ -135,7 +173,9 @@ public class Profile extends JFrame {
         card.add(avatarLarge, gbc);
 
         // --- Right Top: Info ---
-        gbc.gridx = 1; gbc.gridy = 0; gbc.gridheight = 1;
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.gridheight = 1;
         gbc.weightx = 1.0;
 
         JPanel infoPanel = new JPanel();
@@ -169,7 +209,8 @@ public class Profile extends JFrame {
         card.add(infoPanel, gbc);
 
         // --- Right Bottom: Bio & Stats ---
-        gbc.gridx = 1; gbc.gridy = 1;
+        gbc.gridx = 1;
+        gbc.gridy = 1;
         gbc.weighty = 1.0;
 
         // Count Jobs Logic
@@ -210,8 +251,8 @@ public class Profile extends JFrame {
         // Bio Content (ใช้ JTextArea จัดการ Wrap text เอง)
         JTextArea bioText = new JTextArea(bioTextContent);
         bioText.setFont(FONT_BIO);
-        bioText.setLineWrap(true);       // ตัดบรรทัดอัตโนมัติ
-        bioText.setWrapStyleWord(true);  // ตัดที่ช่องว่างคำ
+        bioText.setLineWrap(true); // ตัดบรรทัดอัตโนมัติ
+        bioText.setWrapStyleWord(true); // ตัดที่ช่องว่างคำ
         bioText.setEditable(false);
         bioText.setOpaque(false);
         bioText.setBorder(new EmptyBorder(10, 0, 0, 0));
@@ -226,9 +267,12 @@ public class Profile extends JFrame {
         card.add(bioPanel, gbc);
 
         // --- Buttons (Bottom) ---
+        // Only show buttons if not in minimal mode
         // [Fixed] ย้ายมาเช็คตรงนี้ เพื่อให้ return card เสมอไม่ว่าจะ user ประเภทไหน
-        if ("student".equalsIgnoreCase(statusUser)) {
-            gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+        if (!isMinimalMode && "student".equalsIgnoreCase(statusUser)) {
+            gbc.gridx = 0;
+            gbc.gridy = 2;
+            gbc.gridwidth = 2;
             gbc.weighty = 0;
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.anchor = GridBagConstraints.CENTER;
@@ -240,7 +284,7 @@ public class Profile extends JFrame {
             JButton exportBtn = createPillButton("Export");
             exportBtn.addActionListener(e -> {
                 new ExportF().setVisible(true);
-                // dispose(); // ถ้าไม่อยากปิดหน้านี้ ก็ comment บรรทัดนี้
+                dispose();
             });
 
             JButton editBtn = createPillButton("Edit");
@@ -255,23 +299,28 @@ public class Profile extends JFrame {
             card.add(btnPanel, gbc);
         }
 
-        JButton editBtn = createPillButton("Edit");
-        editBtn.addActionListener(e -> {
-            new ProfileEditor().setVisible(true);
-            dispose(); // ปิดหน้าเก่า แล้วไปหน้า Edit
-        });
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
-        gbc.weighty = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.CENTER;
+        // Only show edit button for non-minimal mode
+        if (!isMinimalMode) {
+            JButton editBtn = createPillButton("Edit");
+            editBtn.addActionListener(e -> {
+                new ProfileEditor().setVisible(true);
+                dispose(); // ปิดหน้าเก่า แล้วไปหน้า Edit
+            });
+            gbc.gridx = 0;
+            gbc.gridy = 2;
+            gbc.gridwidth = 2;
+            gbc.weighty = 0;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.anchor = GridBagConstraints.CENTER;
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
-        btnPanel.setOpaque(false);
-        btnPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
+            JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+            btnPanel.setOpaque(false);
+            btnPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        btnPanel.add(editBtn);
+            btnPanel.add(editBtn);
 
-        card.add(btnPanel, gbc);
+            card.add(btnPanel, gbc);
+        }
 
         return card; // ต้อง return card เสมอ ห้าม return null
     }

@@ -42,7 +42,8 @@ public class AvailableJob extends JFrame {
     public AvailableJob() {
         // 1. โหลดข้อมูลงานทั้งหมดมาก่อน
         allJobs = API.getJobs();
-        if (allJobs == null) allJobs = new ArrayList<>();
+        if (allJobs == null)
+            allJobs = new ArrayList<>();
 
         // 2. กรองงานที่สมัครไปแล้วทิ้ง ก่อนจะเริ่มวาดหน้าจอ
         filterAppliedJobs();
@@ -53,7 +54,8 @@ public class AvailableJob extends JFrame {
     // ฟังก์ชันสำหรับกรองงานที่ user ปัจจุบันสมัครไปแล้ว
     private void filterAppliedJobs() {
         // ถ้ายังไม่ได้ Login ให้ข้ามไป
-        if (Auth.getAuthUser() == null) return;
+        if (Auth.getAuthUser() == null)
+            return;
 
         List<String> appliedJobIds = new ArrayList<>();
         String currentStdId = null;
@@ -76,7 +78,7 @@ public class AvailableJob extends JFrame {
         String sql = "SELECT job_id FROM job_assignment WHERE std_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, currentStdId);
             ResultSet rs = pstmt.executeQuery();
@@ -221,7 +223,8 @@ public class AvailableJob extends JFrame {
     // ========= LOGIC: SEARCH & FILTER ==========
     private void performSearchAndFilter(FilterUI.FilterData filterData) {
         String searchText = searchField.getText().trim();
-        if (searchText.equalsIgnoreCase("Search")) searchText = "";
+        if (searchText.equalsIgnoreCase("Search"))
+            searchText = "";
 
         List<API> result = new ArrayList<>(allJobs);
 
@@ -289,8 +292,24 @@ public class AvailableJob extends JFrame {
             emptyWrapper.add(empty);
             gridPanel.add(emptyWrapper);
         } else {
-            for (API work : jobsToShow) {
-                gridPanel.add(createJobCard(work));
+            // กรองงานที่ status เป็น "complete" ออก
+            List<API> filteredJobs = jobsToShow.stream()
+                    .filter(job -> !"complete".equalsIgnoreCase(safe(job.status)))
+                    .collect(Collectors.toList());
+
+            if (filteredJobs.isEmpty()) {
+                JLabel empty = new JLabel("ไม่พบงานที่คุณค้นหา (No Jobs Found)");
+                empty.setFont(FONT_CARD_WARN);
+                empty.setForeground(Color.DARK_GRAY);
+
+                JPanel emptyWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                emptyWrapper.setOpaque(false);
+                emptyWrapper.add(empty);
+                gridPanel.add(emptyWrapper);
+            } else {
+                for (API work : filteredJobs) {
+                    gridPanel.add(createJobCard(work));
+                }
             }
         }
 
@@ -377,41 +396,51 @@ public class AvailableJob extends JFrame {
             dispose();
         });
 
-        JButton acceptBtn = createRoundedButton("Accept Job", Color.WHITE, new Color(255, 160, 122), true);
-
-        acceptBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "คุณต้องการรับงานนี้ใช่หรือไม่?",
-                    "ยืนยันการรับงาน",
-                    JOptionPane.YES_NO_OPTION);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                try {
-                    int id = Integer.parseInt(work.jobId);
-
-                    // [แก้ไขแล้ว] ส่งแค่ id และ workingHours (ไม่ต้องส่ง title)
-                    boolean success = JobManager.applyJob(id, work.workingHours);
-
-                    if (success) {
-                        JOptionPane.showMessageDialog(this, "รับงานสำเร็จ! (Applied Successfully)");
-
-                        // เมื่อกด OK -> ปิดหน้านี้ -> เปิดหน้า AvailableJob ใหม่
-                        // ซึ่งหน้าใหม่นี้จะวิ่งเข้า Constructor -> filterAppliedJobs -> งานจะหายไป
-                        new AvailableJob().setVisible(true);
-                        dispose();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "ไม่สามารถรับงานได้ (อาจเกิดข้อผิดพลาดหรือรับงานไปแล้ว)",
-                                "Error", JOptionPane.ERROR_MESSAGE);
-                    }
-
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
         btnPanel.add(detailsBtn);
-        btnPanel.add(acceptBtn);
+
+        // เช็คว่างานเต็มหรือยัง
+        int currentWorkers = WorkerManager.getCurrentWorkerCount(Integer.parseInt(work.jobId));
+        boolean isFull = currentWorkers >= work.vacancies;
+
+        if (!isFull) {
+            JButton acceptBtn = createRoundedButton("Accept Job", Color.WHITE, new Color(255, 160, 122), true);
+
+            acceptBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "คุณต้องการรับงานนี้ใช่หรือไม่?",
+                        "ยืนยันการรับงาน",
+                        JOptionPane.YES_NO_OPTION);
+
+                if (confirm == JOptionPane.YES_OPTION) {
+                    try {
+                        int id = Integer.parseInt(work.jobId);
+                        boolean success = JobManager.applyJob(id, work.workingHours);
+
+                        if (success) {
+                            JOptionPane.showMessageDialog(this, "รับงานสำเร็จ! (Applied Successfully)");
+                            new AvailableJob().setVisible(true);
+                            dispose();
+                        } else {
+                            JOptionPane.showMessageDialog(this,
+                                    "ไม่สามารถรับงานได้ (อาจเกิดข้อผิดพลาดหรือรับงานไปแล้ว)",
+                                    "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+
+            btnPanel.add(acceptBtn);
+        } else {
+            // แสดง label "เต็มแล้ว" แทนปุ่ม
+            JLabel fullLabel = new JLabel("เต็มแล้ว");
+            fullLabel.setFont(FONT_BTN);
+            fullLabel.setForeground(Color.GRAY);
+            btnPanel.add(fullLabel);
+        }
+
         card.add(btnPanel, BorderLayout.SOUTH);
 
         return card;
@@ -483,12 +512,23 @@ public class AvailableJob extends JFrame {
 
     private static class RoundedBorder implements javax.swing.border.Border {
         private int radius;
-        RoundedBorder(int radius) { this.radius = radius; }
-        public Insets getBorderInsets(Component c) { return new Insets(radius + 1, radius + 1, radius + 2, radius); }
-        public boolean isBorderOpaque() { return true; }
+
+        RoundedBorder(int radius) {
+            this.radius = radius;
+        }
+
+        public Insets getBorderInsets(Component c) {
+            return new Insets(radius + 1, radius + 1, radius + 2, radius);
+        }
+
+        public boolean isBorderOpaque() {
+            return true;
+        }
+
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             g.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
         }
+
         public Shape getShape(int x, int y, int w, int h) {
             return new java.awt.geom.RoundRectangle2D.Float(x, y, w, h, radius, radius);
         }
