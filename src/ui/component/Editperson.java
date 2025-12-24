@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
+import service.AbsentAssignment;
 import service.WorkerManager;
 import ui.Profile;
 
@@ -463,15 +464,9 @@ public class Editperson extends JDialog {
         JButton btn = new JButton();
         btn.setToolTipText("View Profile");
 
-        // Add ActionListener to open Profile
         btn.addActionListener(e -> {
-            // Hide this Editperson dialog
             setVisible(false);
-
-            // Open Profile in minimal mode (no navbar, no buttons)
             Profile profileFrame = new Profile(stdId, true);
-
-            // When Profile is closed, reopen this Editperson dialog
             profileFrame.addWindowListener(new java.awt.event.WindowAdapter() {
                 @Override
                 public void windowClosed(java.awt.event.WindowEvent evt) {
@@ -520,10 +515,10 @@ public class Editperson extends JDialog {
         return btn;
     }
 
-    // --- BUTTON: Delete (Trash Icon) ---
-    private JButton createDeleteButton() {
+    // --- BUTTON: Absent (Orange Gradient - Mark as Absent) ---
+    private JButton createAbsentButton() {
         JButton btn = new JButton();
-        btn.setToolTipText("Remove Worker");
+        btn.setToolTipText("Mark as Absent (ไม่มาทำงาน)");
 
         btn.setUI(new BasicButtonUI() {
             @Override
@@ -532,23 +527,19 @@ public class Editperson extends JDialog {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 AbstractButton b = (AbstractButton) c;
 
-                // Red Gradient
-                Color c1 = b.getModel().isRollover() ? new Color(255, 82, 82) : new Color(239, 83, 80);
-                Color c2 = b.getModel().isRollover() ? new Color(255, 23, 68) : new Color(211, 47, 47);
+                // Orange Gradient (แทนที่สีแดงเดิม)
+                Color c1 = b.getModel().isRollover() ? new Color(255, 167, 38) : new Color(255, 152, 0);
+                Color c2 = b.getModel().isRollover() ? new Color(251, 140, 0) : new Color(245, 124, 0);
                 GradientPaint gp = new GradientPaint(0, 0, c1, 0, b.getHeight(), c2);
                 g2.setPaint(gp);
                 g2.fillRoundRect(2, 2, b.getWidth() - 4, b.getHeight() - 4, 15, 15);
 
-                // Trash Icon
+                // X Icon (Mark as absent)
                 g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 int cx = b.getWidth() / 2, cy = b.getHeight() / 2;
-                g2.fillRect(cx - 5, cy - 4, 10, 12); // Body
-                g2.fillRect(cx - 7, cy - 7, 14, 2); // Lid
-                g2.fillRect(cx - 2, cy - 9, 4, 2); // Handle
-                // Lines
-                g2.setColor(new Color(255, 255, 255, 150));
-                g2.fillRect(cx - 2, cy - 2, 1, 8);
-                g2.fillRect(cx + 1, cy - 2, 1, 8);
+                g2.drawLine(cx - 5, cy - 5, cx + 5, cy + 5);
+                g2.drawLine(cx + 5, cy - 5, cx - 5, cy + 5);
                 g2.dispose();
             }
         });
@@ -629,31 +620,37 @@ public class Editperson extends JDialog {
 
             panel.add(Box.createHorizontalStrut(10));
 
-            // Delete Btn
+            // Absent Btn (เปลี่ยนจาก Delete เป็น Absent)
             JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
             actionPanel.setBackground(Color.WHITE);
             actionPanel.setPreferredSize(new Dimension(COL_ACTION_WIDTH, 40));
             actionPanel.setMinimumSize(new Dimension(COL_ACTION_WIDTH, 40));
             actionPanel.setMaximumSize(new Dimension(COL_ACTION_WIDTH, 40));
-            JButton deleteBtn = createDeleteButton();
-            deleteBtn.addActionListener(e -> {
-                int confirm = JOptionPane.showConfirmDialog(Editperson.this, "ลบ " + name + "?", "ยืนยัน",
-                        JOptionPane.YES_NO_OPTION);
+            JButton absentBtn = createAbsentButton();
+            absentBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(Editperson.this,
+                        "บันทึกว่า " + name + " ไม่มาทำงาน?",
+                        "ยืนยันการขาดงาน",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
                 if (confirm == JOptionPane.YES_OPTION) {
-                    if (WorkerManager.removeWorkerFromJob(currentJobId, id)) {
-                        participantListPanel.remove(panel);
-                        participantRows.remove(this);
-                        participantListPanel.revalidate();
-                        participantListPanel.repaint();
-
-
+                    AbsentAssignment absent = new AbsentAssignment();
+                    if (absent.markAsAbsent(currentJobId, id)) {
+                        JOptionPane.showMessageDialog(Editperson.this,
+                                "บันทึกการขาดงานของ " + name + " สำเร็จ",
+                                "Success",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        // Refresh list
+                        loadParticipantsFromDB();
                     } else {
-                        JOptionPane.showMessageDialog(Editperson.this, "ลบไม่สำเร็จ", "Error",
+                        JOptionPane.showMessageDialog(Editperson.this,
+                                "บันทึกไม่สำเร็จ",
+                                "Error",
                                 JOptionPane.ERROR_MESSAGE);
                     }
                 }
             });
-            actionPanel.add(deleteBtn);
+            actionPanel.add(absentBtn);
             panel.add(actionPanel);
         }
 

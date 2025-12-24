@@ -9,7 +9,6 @@ import java.util.ArrayList;
 
 public class JobManager {
 
-    // 1. + addJob()
     public boolean addJob(Job job, int hourRate) {
         // [แก้ไข] เพิ่ม end_date ใน SQL
         String sqlJob = "INSERT INTO job (title, details, location, workingHours, dateTime, end_date, imagePath, vacancies, job_type, user_id) " +
@@ -96,6 +95,49 @@ public class JobManager {
                 e.printStackTrace();
             }
         }
+    }
+
+    public ArrayList<Job> getJobs() {
+        ArrayList<Job> jobList = new ArrayList<>();
+        // ดึงข้อมูล job ทั้งหมด (อาจจะ join paid_jobs ด้วยก็ได้ถ้าต้องการ rate)
+        String sql = "SELECT * FROM job ORDER BY job_id DESC";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                // สร้าง Object JobEntity (ซึ่ง implement Job)
+                JobEntity job = new JobEntity();
+
+                // Map ข้อมูลจาก Database เข้า Object
+                // ** หมายเหตุ: ต้องมี Setter ใน JobEntity ให้ครบ **
+                job.setJobId(rs.getInt("job_id")); // แปลง int เป็น String เพื่อให้ตรงกับ SearchEngine
+                job.setTitle(rs.getString("title"));
+                job.setDetails(rs.getString("details"));
+                job.setLocation(rs.getString("location"));
+                job.setWorkingHours(rs.getInt("workingHours"));
+                job.setDateTime(rs.getString("dateTime"));
+
+                // จัดการ end_date
+                if (rs.getTimestamp("end_date") != null) {
+                    job.setEndDate(rs.getString("end_date")); // ต้องดูว่าใน Model เก็บเป็น String หรือ Date
+                }
+
+                job.setImagePath(rs.getString("imagePath"));
+                job.setVacancies(rs.getInt("vacancies"));
+                job.setJobType(rs.getString("job_type"));
+                job.setUserId(rs.getInt("user_id"));
+
+                // เพิ่มเข้า List
+                jobList.add(job);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return jobList;
     }
 
     // 2. + removeJob() (เหมือนเดิม)

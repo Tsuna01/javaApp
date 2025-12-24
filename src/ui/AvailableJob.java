@@ -68,10 +68,9 @@ public class AvailableJob extends JFrame {
             currentStdId = Auth.getAuthUser().getStd_id();
         }
 
-        System.out.println("Filtering jobs for Student ID: " + currentStdId);
-
         if (currentStdId == null) {
-            System.err.println("Warning: std_id is null for user " + Auth.getAuthUser().getName());
+            // System.err.println("Warning: std_id is null for user " +
+            // Auth.getAuthUser().getName());
             return;
         }
 
@@ -150,6 +149,7 @@ public class AvailableJob extends JFrame {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2.setColor(Color.WHITE);
+                    // เรียก getShape จาก RoundedBorder
                     g2.fill(((RoundedBorder) getBorder()).getShape(0, 0, getWidth() - 1, getHeight() - 1));
                     g2.dispose();
                 }
@@ -168,6 +168,26 @@ public class AvailableJob extends JFrame {
                 }
             }
         });
+
+        // FocusListener สำหรับจัดการ placeholder text
+        searchField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (searchField.getText().trim().equals("Search") || searchField.getText().equals("  Search")) {
+                    searchField.setText("");
+                    searchField.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (searchField.getText().trim().isEmpty()) {
+                    searchField.setText("  Search");
+                    searchField.setForeground(Color.GRAY);
+                }
+            }
+        });
+        searchField.setForeground(Color.GRAY); // สีเริ่มต้นเป็นสีเทา
 
         searchPanel.add(searchField, BorderLayout.CENTER);
 
@@ -223,31 +243,73 @@ public class AvailableJob extends JFrame {
     // ========= LOGIC: SEARCH & FILTER ==========
     private void performSearchAndFilter(FilterUI.FilterData filterData) {
         String searchText = searchField.getText().trim();
-        if (searchText.equalsIgnoreCase("Search"))
+        if (searchText.equalsIgnoreCase("Search") || searchText.equalsIgnoreCase("  Search"))
             searchText = "";
 
         List<API> result = new ArrayList<>(allJobs);
 
+        // 1. Text Search
         if (!searchText.isEmpty()) {
             String lowerSearch = searchText.toLowerCase();
             result = result.stream()
                     .filter(job -> safe(job.title).toLowerCase().contains(lowerSearch) ||
-                            safe(job.location).toLowerCase().contains(lowerSearch))
+                            safe(job.location).toLowerCase().contains(lowerSearch) ||
+                            safe(job.details).toLowerCase().contains(lowerSearch))
                     .collect(Collectors.toList());
         }
 
         if (filterData != null) {
+            // 2. Job Type Filter (Volunteer / Paid)
             boolean showVol = filterData.isVolunteer;
             boolean showPaid = filterData.isPaid;
 
-            if (showVol != showPaid) {
-                if (showVol) {
-                    result = result.stream().filter(j -> isVolunteerJob(j.jobType)).collect(Collectors.toList());
-                } else {
-                    result = result.stream().filter(j -> !isVolunteerJob(j.jobType)).collect(Collectors.toList());
+            // กรณี: ไม่เลือกอะไรเลย -> ไม่แสดงงาน
+            if (!showVol && !showPaid) {
+                result = new ArrayList<>(); // ไม่แสดงอะไรเลย
+            }
+            // กรณี: เลือกแค่ Volunteer
+            else if (showVol && !showPaid) {
+                result = result.stream().filter(j -> isVolunteerJob(j.jobType)).collect(Collectors.toList());
+            }
+            // กรณี: เลือกแค่ Paid
+            else if (!showVol && showPaid) {
+                result = result.stream().filter(j -> isPaidJob(j.jobType)).collect(Collectors.toList());
+            }
+            // กรณี: เลือกทั้งสอง (All) -> แสดงทั้งหมด (ไม่ต้อง filter)
+
+            // 3. Date Range Filter (ถ้า dateFrom หรือ dateTo ไม่ว่าง)
+            if (!filterData.dateFrom.isEmpty() && !filterData.dateTo.isEmpty()) {
+                try {
+                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("d/M/yy", java.util.Locale.ENGLISH);
+                    java.util.Date fromDate = sdf.parse(filterData.dateFrom);
+                    java.util.Date toDate = sdf.parse(filterData.dateTo);
+
+                    result = result.stream()
+                            .filter(job -> {
+                                try {
+                                    String jobDateStr = extractDateOnly(job.dateTime);
+                                    if (jobDateStr == null || jobDateStr.isEmpty())
+                                        return true;
+                                    java.util.Date jobDate = sdf.parse(jobDateStr);
+                                    return !jobDate.before(fromDate) && !jobDate.after(toDate);
+                                } catch (Exception e) {
+                                    return true; // ถ้า parse ไม่ได้ ให้แสดงปกติ
+                                }
+                            })
+                            .collect(Collectors.toList());
+                } catch (Exception e) {
+                    System.err.println("Date parse error: " + e.getMessage());
                 }
             }
 
+            // 4. Sort by Date
+            if ("Oldest".equals(filterData.sortByDate)) {
+                result.sort(Comparator.comparing(j -> safe(j.dateTime)));
+            } else if ("Newest".equals(filterData.sortByDate)) {
+                result.sort((j1, j2) -> safe(j2.dateTime).compareTo(safe(j1.dateTime)));
+            }
+
+            // 5. Sort by Hours
             if ("Low -> High".equals(filterData.sortByHours)) {
                 result.sort(Comparator.comparingInt(j -> j.workingHours));
             } else if ("High -> Low".equals(filterData.sortByHours)) {
@@ -258,8 +320,31 @@ public class AvailableJob extends JFrame {
         updateJobGrid(result);
     }
 
+    // Helper: ดึงเฉพาะส่วนวันที่จาก dateTime string
+    private String extractDateOnly(String dateTime) {
+        if (dateTime == null || dateTime.trim().isEmpty())
+            return null;
+        String[] parts = dateTime.split(" ");
+        if (parts.length > 0) {
+            // แปลง format ถ้าจำเป็น (เช่น 2025-01-15 -> 15/1/25)
+            String date = parts[0];
+            if (date.contains("-")) {
+                String[] dateParts = date.split("-");
+                if (dateParts.length == 3) {
+                    return dateParts[2] + "/" + dateParts[1] + "/" + dateParts[0].substring(2);
+                }
+            }
+            return date;
+        }
+        return null;
+    }
+
     private boolean isVolunteerJob(String type) {
         return safe(type).toLowerCase().contains("volunteer") || safe(type).toLowerCase().contains("อาสา");
+    }
+
+    private boolean isPaidJob(String type) {
+        return safe(type).toLowerCase().contains("paid") || safe(type).toLowerCase().contains("จ้าง");
     }
 
     // ========= JOB GRID SYSTEM ==========
@@ -283,14 +368,7 @@ public class AvailableJob extends JFrame {
         gridPanel.removeAll();
 
         if (jobsToShow == null || jobsToShow.isEmpty()) {
-            JLabel empty = new JLabel("ไม่พบงานที่คุณค้นหา (No Jobs Found)");
-            empty.setFont(FONT_CARD_WARN);
-            empty.setForeground(Color.DARK_GRAY);
-
-            JPanel emptyWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            emptyWrapper.setOpaque(false);
-            emptyWrapper.add(empty);
-            gridPanel.add(emptyWrapper);
+            showEmptyMessage();
         } else {
             // กรองงานที่ status เป็น "complete" ออก
             List<API> filteredJobs = jobsToShow.stream()
@@ -298,14 +376,7 @@ public class AvailableJob extends JFrame {
                     .collect(Collectors.toList());
 
             if (filteredJobs.isEmpty()) {
-                JLabel empty = new JLabel("ไม่พบงานที่คุณค้นหา (No Jobs Found)");
-                empty.setFont(FONT_CARD_WARN);
-                empty.setForeground(Color.DARK_GRAY);
-
-                JPanel emptyWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-                emptyWrapper.setOpaque(false);
-                emptyWrapper.add(empty);
-                gridPanel.add(emptyWrapper);
+                showEmptyMessage();
             } else {
                 for (API work : filteredJobs) {
                     gridPanel.add(createJobCard(work));
@@ -315,6 +386,17 @@ public class AvailableJob extends JFrame {
 
         gridPanel.revalidate();
         gridPanel.repaint();
+    }
+
+    private void showEmptyMessage() {
+        JLabel empty = new JLabel("ไม่พบงานที่คุณค้นหา (No Jobs Found)");
+        empty.setFont(FONT_CARD_WARN);
+        empty.setForeground(Color.DARK_GRAY);
+
+        JPanel emptyWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        emptyWrapper.setOpaque(false);
+        emptyWrapper.add(empty);
+        gridPanel.add(emptyWrapper);
     }
 
     // ========= JOB CARD ==========
@@ -510,30 +592,6 @@ public class AvailableJob extends JFrame {
         });
     }
 
-    private static class RoundedBorder implements javax.swing.border.Border {
-        private int radius;
-
-        RoundedBorder(int radius) {
-            this.radius = radius;
-        }
-
-        public Insets getBorderInsets(Component c) {
-            return new Insets(radius + 1, radius + 1, radius + 2, radius);
-        }
-
-        public boolean isBorderOpaque() {
-            return true;
-        }
-
-        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-            g.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
-        }
-
-        public Shape getShape(int x, int y, int w, int h) {
-            return new java.awt.geom.RoundRectangle2D.Float(x, y, w, h, radius, radius);
-        }
-    }
-
     private ImageIcon loadAndResizeImage(String imagePath, int width, int height) {
         if (imagePath == null || imagePath.trim().isEmpty()) {
             return new ImageIcon(createPlaceholderImage(width, new Color(139, 69, 19)));
@@ -558,5 +616,34 @@ public class AvailableJob extends JFrame {
         }
 
         return new ImageIcon(createPlaceholderImage(width, new Color(139, 69, 19)));
+    }
+
+    // ==========================================
+    // ✅ FIXED CLASS: RoundedBorder
+    // ==========================================
+    private static class RoundedBorder implements javax.swing.border.Border {
+        private int radius;
+
+        RoundedBorder(int radius) {
+            this.radius = radius;
+        }
+
+        public Insets getBorderInsets(Component c) {
+            // [แก้ไข] กำหนดระยะห่างให้พอดี ไม่ให้กินพื้นที่ text field จนหมด
+            // บน-ล่าง 4px (เหลือที่ 32px), ซ้าย-ขวา 15px (หลบมุมโค้ง)
+            return new Insets(4, 15, 4, 15);
+        }
+
+        public boolean isBorderOpaque() {
+            return true;
+        }
+
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            g.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+        }
+
+        public Shape getShape(int x, int y, int w, int h) {
+            return new java.awt.geom.RoundRectangle2D.Float(x, y, w, h, radius, radius);
+        }
     }
 }

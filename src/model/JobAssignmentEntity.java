@@ -136,4 +136,17 @@ public class JobAssignmentEntity implements JobAssignment {
     public void setDateTime(String dateTime) {
         this.dateTime = dateTime;
     }
+
+    // [เพิ่ม] สำหรับ filter Job Type
+    private String jobType;
+
+    @Override
+    public String getJobType() {
+        return jobType;
+    }
+
+    @Override
+    public void setJobType(String jobType) {
+        this.jobType = jobType;
+    }
 }

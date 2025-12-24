@@ -12,7 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class API {
- 
+
     public String jobId;
     public String title;
     public String details;
@@ -26,7 +26,7 @@ public class API {
     public String imagePath;
 
     public static ArrayList<API> getJobs() {
-        
+
         ArrayList<API> list = new ArrayList<>();
         String sql = "SELECT * FROM job";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -86,8 +86,8 @@ public class API {
     public static ArrayList<JobAssignment> getUserAssign(String std_id) {
         ArrayList<JobAssignment> list = new ArrayList<>();
 
-        // SQL: Join ตาราง job เพื่อเอา title, imagePath, location, dateTime
-        String sql = "SELECT ja.*, j.title, j.imagePath, j.location, j.dateTime " +
+        // SQL: Join ตาราง job เพื่อเอา title, imagePath, location, dateTime, job_type
+        String sql = "SELECT ja.*, j.title, j.imagePath, j.location, j.dateTime, j.job_type " +
                 "FROM job_assignment ja " +
                 "JOIN job j ON ja.job_id = j.job_id " +
                 "WHERE ja.std_id = ?";
@@ -110,11 +110,12 @@ public class API {
                     assign.setHoursAmount(rs.getInt("hours_amount"));
                     assign.setRewardAmount(rs.getInt("reward_amount"));
 
-                    // ดึง title, imagePath, location, dateTime จากตาราง job ที่ Join มา
+                    // ดึง title, imagePath, location, dateTime, job_type จากตาราง job ที่ Join มา
                     assign.setTitle(rs.getString("title"));
                     assign.setImagePath(rs.getString("imagePath"));
                     assign.setLocation(rs.getString("location"));
                     assign.setDateTime(rs.getString("dateTime"));
+                    assign.setJobType(rs.getString("job_type")); // [เพิ่ม]
 
                     list.add(assign);
                 }
@@ -214,6 +215,56 @@ public class API {
             e.printStackTrace();
             return false;
         }
+    }
+
+    /**
+     * ดึงข้อมูลงานที่เสร็จแล้วสำหรับ Export
+     * 
+     * @param stdId รหัสนักศึกษา
+     * @return ArrayList ของ String[] ที่มี [วันที่, ชื่องาน, ชั่วโมง, จำนวนเงิน]
+     */
+    public static ArrayList<String[]> getCompletedAssignmentsForExport(String stdId) {
+        ArrayList<String[]> list = new ArrayList<>();
+
+        String sql = "SELECT ja.assign_at, ja.hours_amount, ja.reward_amount, j.title " +
+                "FROM job_assignment ja " +
+                "JOIN job j ON ja.job_id = j.job_id " +
+                "WHERE ja.std_id = ? AND (ja.status = 'complete' OR ja.status = 'completed')";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, stdId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String assignAt = rs.getString("assign_at");
+                    String title = rs.getString("title");
+                    int hours = rs.getInt("hours_amount");
+                    int reward = rs.getInt("reward_amount");
+
+                    // แปลงวันที่เป็น format ที่อ่านง่าย
+                    String dateFormatted = assignAt;
+                    if (assignAt != null && assignAt.length() >= 10) {
+                        dateFormatted = assignAt.substring(0, 10);
+                    }
+
+                    String[] row = new String[] {
+                            dateFormatted,
+                            title,
+                            String.valueOf(hours),
+                            String.valueOf(reward)
+                    };
+                    list.add(row);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error in getCompletedAssignmentsForExport: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return list;
     }
 
 }

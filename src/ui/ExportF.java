@@ -13,10 +13,13 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 
+import service.API;
 import service.Auth;
 import service.Student;
 import service.User;
 import ui.component.Navbar;
+
+import java.util.ArrayList;
 
 public class ExportF extends JFrame {
 
@@ -215,21 +218,17 @@ public class ExportF extends JFrame {
 
         String[] columns = { "", "วันที่", "รายการงาน (Description)", "ชม.", "จำนวนเงิน (บาท)" };
 
-        // [Modified] เปลี่ยนให้ Checkbox เริ่มต้นเป็น false ทั้งหมด หรือตามต้องการ
-        Object[][] data = {
-                { false, "1/1/2568", "กิจกรรม A", "5", "35" },
-                { false, "1/1/2568", "กิจกรรม A", "5", "35" },
-                { false, "1/1/2568", "กิจกรรม A", "5", "35" },
-                { false, "1/1/2568", "กิจกรรม A", "5", "35" },
-                { false, "1/1/2568", "กิจกรรม A", "5", "35" }
-        };
+        // ดึงข้อมูลจากฐานข้อมูลโดยใช้ generateExportData pattern
+        Object[][] data = loadExportDataFromDB();
 
         DefaultTableModel model = new DefaultTableModel(data, columns) {
             @Override
             public Class<?> getColumnClass(int column) {
-                if (column == 0) return Boolean.class;
+                if (column == 0)
+                    return Boolean.class;
                 return String.class;
             }
+
             @Override
             public boolean isCellEditable(int row, int column) {
                 return column == 0;
@@ -280,6 +279,50 @@ public class ExportF extends JFrame {
         return panel;
     }
 
+    /**
+     * ดึงข้อมูลสำหรับ Export จากฐานข้อมูล โดยใช้ generateExportData pattern
+     */
+    private Object[][] loadExportDataFromDB() {
+        // ดึง std_id ของ user ที่ login อยู่
+        String stdId = null;
+        User currentUser = Auth.getAuthUser();
+
+        if (currentUser instanceof Student) {
+            stdId = ((Student) currentUser).getStdId();
+        } else if (currentUser != null) {
+            stdId = currentUser.getStd_id();
+        }
+
+        // ถ้าไม่มี std_id ให้ return empty array
+        if (stdId == null || stdId.isEmpty()) {
+            return new Object[][] {
+                    { false, "-", "ไม่พบข้อมูล (กรุณา Login ด้วยบัญชีนักศึกษา)", "-", "0" }
+            };
+        }
+
+        // ดึงข้อมูลจาก API
+        ArrayList<String[]> assignments = API.getCompletedAssignmentsForExport(stdId);
+
+        if (assignments == null || assignments.isEmpty()) {
+            return new Object[][] {
+                    { false, "-", "ยังไม่มีงานที่เสร็จสิ้น", "0", "0" }
+            };
+        }
+
+        // แปลง ArrayList<String[]> เป็น Object[][]
+        Object[][] data = new Object[assignments.size()][5];
+        for (int i = 0; i < assignments.size(); i++) {
+            String[] row = assignments.get(i);
+            data[i][0] = false; // Checkbox
+            data[i][1] = row[0]; // วันที่
+            data[i][2] = row[1]; // ชื่องาน
+            data[i][3] = row[2]; // ชั่วโมง
+            data[i][4] = row[3]; // จำนวนเงิน
+        }
+
+        return data;
+    }
+
     // [New] ฟังก์ชันคำนวณเงินรวม
     private void calculateTotalAmount(DefaultTableModel model) {
         int total = 0;
@@ -326,7 +369,8 @@ public class ExportF extends JFrame {
         return panel;
     }
 
-    // ... (createSignatureSection, createRoundedButton, printPaymentStatement code remains same) ...
+    // ... (createSignatureSection, createRoundedButton, printPaymentStatement code
+    // remains same) ...
     private JPanel createSignatureSection() {
         JPanel panel = new JPanel(new GridLayout(1, 2, 50, 0));
         panel.setOpaque(false);
@@ -398,7 +442,8 @@ public class ExportF extends JFrame {
         job.setPrintable(new Printable() {
             @Override
             public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
-                if (pageIndex > 0) return NO_SUCH_PAGE;
+                if (pageIndex > 0)
+                    return NO_SUCH_PAGE;
                 Graphics2D g2d = (Graphics2D) graphics;
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 double scaleX = pageFormat.getImageableWidth() / contentPanel.getWidth();
@@ -413,9 +458,11 @@ public class ExportF extends JFrame {
         if (doPrint) {
             try {
                 job.print();
-                JOptionPane.showMessageDialog(this, "พิมพ์เอกสารสำเร็จ!", "Print Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "พิมพ์เอกสารสำเร็จ!", "Print Success",
+                        JOptionPane.INFORMATION_MESSAGE);
             } catch (PrinterException e) {
-                JOptionPane.showMessageDialog(this, "เกิดข้อผิดพลาดในการพิมพ์: " + e.getMessage(), "Print Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "เกิดข้อผิดพลาดในการพิมพ์: " + e.getMessage(), "Print Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }

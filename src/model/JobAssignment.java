@@ -50,4 +50,9 @@ public interface JobAssignment {
     String getDateTime();
 
     void setDateTime(String dateTime);
+
+    // [เพิ่ม] สำหรับ filter Job Type
+    String getJobType();
+
+    void setJobType(String jobType);
 }

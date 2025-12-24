@@ -296,12 +296,32 @@ public class Workmenu extends JFrame {
             CompletedAssignment com = new CompletedAssignment();
             int confirm = JOptionPane.showConfirmDialog(
                     this,
-                    "คุณแน่ใจหรือไม่: " + currentSelectedJob.title + "?",
+                    "คุณแน่ใจหรือไม่ว่าต้องการปิดงาน: " + currentSelectedJob.title + "?",
                     "ยืนยันการทำงาน",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
-                com.submitComplete(Unique);
+                boolean success = com.submitComplete(Unique, "complete");
+                if (success) {
+                    try {
+                        int jobIdInt = Integer.parseInt(Unique);
+                        // เรียก handleStatus() สำหรับทุก Worker ที่รับงานนี้
+                        com.updateAllWorkersStatus(jobIdInt);
+
+                        JOptionPane.showMessageDialog(this,
+                                "บันทึกเสร็จสิ้นสำเร็จ! อัปเดต Profile ของผู้รับงานทั้งหมดแล้ว",
+                                "Success",
+                                JOptionPane.INFORMATION_MESSAGE);
+
+                        // Refresh UI
+                        dispose();
+                        new Workmenu().setVisible(true);
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "ไม่สามารถบันทึกได้", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 

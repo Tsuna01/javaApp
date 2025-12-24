@@ -5,11 +5,16 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import model.JobAssignment;
 // ตรวจสอบ package ของ Student ให้ตรงกับโปรเจกต์คุณ (model หรือ service)
@@ -17,6 +22,7 @@ import service.API;
 import service.Auth;
 import service.Student;
 import service.User;
+import ui.component.FilterUI;
 import ui.component.Navbar;
 
 public class MyJob extends JFrame {
@@ -30,8 +36,32 @@ public class MyJob extends JFrame {
     private static final Font FONT_CARD_STATUS = new Font("Tahoma", Font.BOLD, 14);
     private static final Font FONT_BTN = new Font("SansSerif", Font.BOLD, 14);
 
+    // [เพิ่ม] Data Management สำหรับ Search/Filter
+    private ArrayList<JobAssignment> allMyJobs;
+    private JPanel gridPanel;
+    private JTextField searchField;
+    private String currentStdId;
+
     public MyJob() {
+        loadUserJobs();
         initialize();
+    }
+
+    // [เพิ่ม] โหลดข้อมูลงานของ user ก่อน
+    private void loadUserJobs() {
+        User currentUser = Auth.getAuthUser();
+
+        if (currentUser instanceof Student) {
+            currentStdId = ((Student) currentUser).getStdId();
+        } else if (currentUser != null) {
+            currentStdId = currentUser.getStd_id();
+        }
+
+        if (currentStdId != null) {
+            allMyJobs = API.getUserAssign(currentStdId);
+        } else {
+            allMyJobs = new ArrayList<>();
+        }
     }
 
     private void initialize() {
@@ -72,12 +102,16 @@ public class MyJob extends JFrame {
         JLabel title = new JLabel("My Job (งานของฉัน)");
         title.setFont(FONT_TITLE);
 
-        // Search Bar with Filter Icon
+        // [เพิ่ม] Container for search field and filter button
+        JPanel searchContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        searchContainer.setOpaque(false);
+
+        // Search Bar
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.setOpaque(false);
-        searchPanel.setPreferredSize(new Dimension(200, 40));
+        searchPanel.setPreferredSize(new Dimension(220, 40));
 
-        JTextField searchField = new JTextField("  Search") {
+        searchField = new JTextField("  Search") {
             @Override
             protected void paintComponent(Graphics g) {
                 if (!isOpaque() && getBorder() instanceof RoundedBorder) {
@@ -94,55 +128,235 @@ public class MyJob extends JFrame {
         searchField.setBorder(new RoundedBorder(25));
         searchField.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
+        // [เพิ่ม] Search on Enter key
+        searchField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    performSearchAndFilter(null);
+                }
+            }
+        });
+
+        // [เพิ่ม] FocusListener สำหรับจัดการ placeholder text
+        searchField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (searchField.getText().trim().equals("Search") || searchField.getText().equals("  Search")) {
+                    searchField.setText("");
+                    searchField.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (searchField.getText().trim().isEmpty()) {
+                    searchField.setText("  Search");
+                    searchField.setForeground(Color.GRAY);
+                }
+            }
+        });
+        searchField.setForeground(Color.GRAY); // สีเริ่มต้นเป็นสีเทา
+
         searchPanel.add(searchField, BorderLayout.CENTER);
 
+        // [เพิ่ม] Filter Button
+        JButton filterBtn = new JButton("☰") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(Color.BLACK);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
+        filterBtn.setFont(new Font("SansSerif", Font.BOLD, 20));
+        filterBtn.setForeground(Color.BLACK);
+        filterBtn.setContentAreaFilled(false);
+        filterBtn.setBorderPainted(false);
+        filterBtn.setPreferredSize(new Dimension(40, 40));
+        filterBtn.setFocusPainted(false);
+        filterBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        filterBtn.addActionListener(e -> {
+            JDialog dialog = new JDialog(this, "Filter My Jobs", true);
+            dialog.setLayout(new BorderLayout());
+
+            FilterUI filterUI = new FilterUI();
+
+            filterUI.setOnApplyListener(evt -> {
+                FilterUI.FilterData data = filterUI.getFilterData();
+                performSearchAndFilter(data);
+                dialog.dispose();
+            });
+
+            dialog.add(filterUI);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+        });
+
+        searchContainer.add(searchPanel);
+        searchContainer.add(filterBtn);
+
         panel.add(title, BorderLayout.WEST);
-        panel.add(searchPanel, BorderLayout.EAST);
+        panel.add(searchContainer, BorderLayout.EAST);
 
         return panel;
     }
 
-    // ========= JOB GRID ==========
-    private JScrollPane createJobGrid() {
-        JPanel grid = new JPanel(new GridLayout(0, 2, 30, 30)); // 2 Columns
-        grid.setOpaque(false);
-        grid.setBorder(new EmptyBorder(10, 10, 10, 10));
+    // ========= LOGIC: SEARCH & FILTER ==========
+    private void performSearchAndFilter(FilterUI.FilterData filterData) {
+        String searchText = searchField.getText().trim();
+        if (searchText.equalsIgnoreCase("Search") || searchText.equals("  Search"))
+            searchText = "";
 
-        // 1. ดึงรหัสนักศึกษาปัจจุบัน
-        String currentStdId = null;
-        User currentUser = Auth.getAuthUser();
+        List<JobAssignment> result = new ArrayList<>(allMyJobs);
 
-        if (currentUser instanceof Student) {
-            currentStdId = ((Student) currentUser).getStdId();
-        } else if (currentUser != null) {
-            currentStdId = currentUser.getStd_id();
+        // 1. Text Search
+        if (!searchText.isEmpty()) {
+            String lowerSearch = searchText.toLowerCase();
+            result = result.stream()
+                    .filter(job -> safe(job.getTitle()).toLowerCase().contains(lowerSearch) ||
+                            safe(job.getLocation()).toLowerCase().contains(lowerSearch) ||
+                            safe(job.getStatus()).toLowerCase().contains(lowerSearch))
+                    .collect(Collectors.toList());
         }
 
-        // 2. ดึงข้อมูลงานเฉพาะของคนนี้ (ใช้ getUserAssign แทน getJobAssign)
-        if (currentStdId != null) {
-            ArrayList<JobAssignment> myJobs = API.getUserAssign(currentStdId);
+        if (filterData != null) {
+            // 2. Job Type Filter (Volunteer / Paid)
+            boolean showVol = filterData.isVolunteer;
+            boolean showPaid = filterData.isPaid;
 
-            if (myJobs.isEmpty()) {
-                JLabel emptyLabel = new JLabel("คุณยังไม่มีงานที่รับไว้ (No jobs assigned)");
-                emptyLabel.setFont(new Font("Tahoma", Font.PLAIN, 16));
-                grid.add(emptyLabel);
-            } else {
-                for (JobAssignment work : myJobs) {
-                    // [แก้ไขแล้ว] เพิ่มการ์ดลงใน Grid
-                    grid.add(createJobCard(work));
+            // กรณี: ไม่เลือกอะไรเลย -> ไม่แสดงงาน
+            if (!showVol && !showPaid) {
+                result = new ArrayList<>();
+            }
+            // กรณี: เลือกแค่ Volunteer
+            else if (showVol && !showPaid) {
+                result = result.stream().filter(j -> isVolunteerJob(j.getJobType())).collect(Collectors.toList());
+            }
+            // กรณี: เลือกแค่ Paid
+            else if (!showVol && showPaid) {
+                result = result.stream().filter(j -> isPaidJob(j.getJobType())).collect(Collectors.toList());
+            }
+            // กรณี: เลือกทั้งสอง (All) -> แสดงทั้งหมด
+
+            // 3. Date Range Filter
+            if (!filterData.dateFrom.isEmpty() && !filterData.dateTo.isEmpty()) {
+                try {
+                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("d/M/yy", java.util.Locale.ENGLISH);
+                    java.util.Date fromDate = sdf.parse(filterData.dateFrom);
+                    java.util.Date toDate = sdf.parse(filterData.dateTo);
+
+                    result = result.stream()
+                            .filter(job -> {
+                                try {
+                                    String jobDateStr = extractDateOnly(job.getDateTime());
+                                    if (jobDateStr == null || jobDateStr.isEmpty())
+                                        return true;
+                                    java.util.Date jobDate = sdf.parse(jobDateStr);
+                                    return !jobDate.before(fromDate) && !jobDate.after(toDate);
+                                } catch (Exception e) {
+                                    return true;
+                                }
+                            })
+                            .collect(Collectors.toList());
+                } catch (Exception e) {
+                    System.err.println("Date parse error: " + e.getMessage());
                 }
             }
-        } else {
-            grid.add(new JLabel("Please Login first"));
+
+            // 4. Sort by Date
+            if ("Oldest".equals(filterData.sortByDate)) {
+                result.sort(Comparator.comparing(j -> safe(j.getDateTime())));
+            } else if ("Newest".equals(filterData.sortByDate)) {
+                result.sort((j1, j2) -> safe(j2.getDateTime()).compareTo(safe(j1.getDateTime())));
+            }
+
+            // 5. Sort by Hours
+            if ("Low -> High".equals(filterData.sortByHours)) {
+                result.sort(Comparator.comparingInt(JobAssignment::getHoursAmount));
+            } else if ("High -> Low".equals(filterData.sortByHours)) {
+                result.sort((j1, j2) -> j2.getHoursAmount() - j1.getHoursAmount());
+            }
         }
 
-        JScrollPane scroll = new JScrollPane(grid);
+        updateJobGrid(result);
+    }
+
+    // Helper: ดึงเฉพาะส่วนวันที่จาก dateTime string
+    private String extractDateOnly(String dateTime) {
+        if (dateTime == null || dateTime.trim().isEmpty())
+            return null;
+        String[] parts = dateTime.split(" ");
+        if (parts.length > 0) {
+            String date = parts[0];
+            if (date.contains("-")) {
+                String[] dateParts = date.split("-");
+                if (dateParts.length == 3) {
+                    return dateParts[2] + "/" + dateParts[1] + "/" + dateParts[0].substring(2);
+                }
+            }
+            return date;
+        }
+        return null;
+    }
+
+    // Helper: เช็คว่าเป็นงานอาสาหรือไม่
+    private boolean isVolunteerJob(String type) {
+        return safe(type).toLowerCase().contains("volunteer") || safe(type).toLowerCase().contains("อาสา");
+    }
+
+    // Helper: เช็คว่าเป็นงานจ้างหรือไม่
+    private boolean isPaidJob(String type) {
+        return safe(type).toLowerCase().contains("paid") || safe(type).toLowerCase().contains("จ้าง");
+    }
+
+    // ========= JOB GRID ==========
+    private JScrollPane createJobGrid() {
+        gridPanel = new JPanel(new GridLayout(0, 2, 30, 30)); // 2 Columns
+        gridPanel.setOpaque(false);
+        gridPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        // แสดงข้อมูลเริ่มต้น
+        updateJobGrid(allMyJobs);
+
+        JScrollPane scroll = new JScrollPane(gridPanel);
         scroll.setBorder(null);
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
 
         return scroll;
+    }
+
+    // [เพิ่ม] Method สำหรับ update grid ด้วยข้อมูลใหม่
+    private void updateJobGrid(List<JobAssignment> jobsToShow) {
+        gridPanel.removeAll();
+
+        if (currentStdId == null) {
+            JLabel loginLabel = new JLabel("กรุณา Login ก่อน (Please Login first)");
+            loginLabel.setFont(new Font("Tahoma", Font.PLAIN, 16));
+            loginLabel.setForeground(Color.GRAY);
+            gridPanel.add(loginLabel);
+        } else if (jobsToShow == null || jobsToShow.isEmpty()) {
+            JLabel emptyLabel = new JLabel("ไม่พบงานที่ค้นหา (No jobs found)");
+            emptyLabel.setFont(new Font("Tahoma", Font.PLAIN, 16));
+            emptyLabel.setForeground(Color.GRAY);
+            gridPanel.add(emptyLabel);
+        } else {
+            for (JobAssignment work : jobsToShow) {
+                gridPanel.add(createJobCard(work));
+            }
+        }
+
+        gridPanel.revalidate();
+        gridPanel.repaint();
     }
 
     // ========= JOB CARD ==========
