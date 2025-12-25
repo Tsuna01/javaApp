@@ -9,8 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -118,6 +120,141 @@ public class AddEvent extends JFrame {
         JButton btnImport = createStyledButton("Import", Green_RGB, Color.WHITE);
         JButton btnClear = createStyledButton("Clear", new Color(149, 165, 166), Color.WHITE);
         JButton btnPost = createStyledButton("Post Event", PRIMARY_COLOR, Color.WHITE);
+
+        // ========================================================
+        // ส่วน Logic อ่านไฟล์ .txt สำหรับ Import Event
+        // Format: title=, vacancies=, location=, workingHours=, payment=, details=,
+        // dateTime=, endDate=
+        // ========================================================
+        btnImport.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("เลือกไฟล์ข้อมูล Event (.txt)");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("Text Files (*.txt)", "txt"));
+
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                try {
+                    // อ่านทุกบรรทัด
+                    List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+
+                    StringBuilder detailsBuilder = new StringBuilder();
+                    StringBuilder locationBuilder = new StringBuilder();
+                    boolean isReadingDetails = false;
+                    boolean isReadingLocation = false;
+
+                    for (String line : lines) {
+                        String trimLine = line.trim();
+                        String lowerLine = trimLine.toLowerCase();
+
+                        if (lowerLine.startsWith("title=")) {
+                            titleField.setText(trimLine.substring(6).trim());
+                            isReadingDetails = false;
+                            isReadingLocation = false;
+                        } else if (lowerLine.startsWith("vacancies=")) {
+                            vacanciesField.setText(trimLine.substring(10).trim());
+                            isReadingDetails = false;
+                            isReadingLocation = false;
+                        } else if (lowerLine.startsWith("workinghours=")) {
+                            workingHoursField.setText(trimLine.substring(13).trim());
+                            isReadingDetails = false;
+                            isReadingLocation = false;
+                        } else if (lowerLine.startsWith("payment=")) {
+                            String paymentValue = trimLine.substring(8).trim().toLowerCase();
+                            if (paymentValue.equals("no") || paymentValue.equals("0") || paymentValue.isEmpty()) {
+                                noButton.setSelected(true);
+                                togglePayment(false);
+                            } else {
+                                yesButton.setSelected(true);
+                                togglePayment(true);
+                                // ลองแปลงเป็นตัวเลข
+                                String numericPart = paymentValue.replaceAll("[^0-9]", "");
+                                if (!numericPart.isEmpty()) {
+                                    paymentField.setText(numericPart);
+                                }
+                            }
+                            isReadingDetails = false;
+                            isReadingLocation = false;
+                        } else if (lowerLine.startsWith("datetime=") || lowerLine.startsWith("date=")) {
+                            // Format: datetime=2025-01-15 09:00 หรือ date=2025-01-15
+                            int prefixLen = lowerLine.startsWith("datetime=") ? 9 : 5;
+                            String dateTimeValue = trimLine.substring(prefixLen).trim();
+                            try {
+                                SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
+                                if (dateTimeValue.contains(" ")) {
+                                    String[] parts = dateTimeValue.split(" ");
+                                    Date date = inputFormat.parse(parts[0]);
+                                    dateSpinner.setValue(date);
+                                    if (parts.length > 1) {
+                                        timeField.setText(parts[1]);
+                                    }
+                                } else {
+                                    Date date = inputFormat.parse(dateTimeValue);
+                                    dateSpinner.setValue(date);
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("Error parsing date: " + ex.getMessage());
+                            }
+                            isReadingDetails = false;
+                            isReadingLocation = false;
+                        } else if (lowerLine.startsWith("enddate=")) {
+                            String endDateValue = trimLine.substring(8).trim();
+                            if (!endDateValue.isEmpty() && !endDateValue.equalsIgnoreCase("null")) {
+                                chkEndDate.setSelected(true);
+                                endDateSpinner.setEnabled(true);
+                                endTimeField.setEnabled(true);
+                                try {
+                                    SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
+                                    if (endDateValue.contains(" ")) {
+                                        String[] parts = endDateValue.split(" ");
+                                        Date date = inputFormat.parse(parts[0]);
+                                        endDateSpinner.setValue(date);
+                                        if (parts.length > 1) {
+                                            endTimeField.setText(parts[1]);
+                                        }
+                                    } else {
+                                        Date date = inputFormat.parse(endDateValue);
+                                        endDateSpinner.setValue(date);
+                                    }
+                                } catch (Exception ex) {
+                                    System.err.println("Error parsing end date: " + ex.getMessage());
+                                }
+                            }
+                            isReadingDetails = false;
+                            isReadingLocation = false;
+                        } else if (lowerLine.startsWith("location=")) {
+                            locationBuilder = new StringBuilder();
+                            locationBuilder.append(trimLine.substring(9).trim());
+                            isReadingLocation = true;
+                            isReadingDetails = false;
+                        } else if (lowerLine.startsWith("details=")) {
+                            detailsBuilder = new StringBuilder();
+                            detailsBuilder.append(trimLine.substring(8).trim());
+                            isReadingDetails = true;
+                            isReadingLocation = false;
+                        } else if (isReadingDetails) {
+                            detailsBuilder.append("\n").append(line);
+                        } else if (isReadingLocation) {
+                            locationBuilder.append("\n").append(line);
+                        }
+                    }
+
+                    // ใส่ค่า Location และ Details
+                    locationField.setText(locationBuilder.toString());
+                    detailsArea.setText(detailsBuilder.toString());
+
+                    // อัพเดท Live Preview
+                    updatePreview();
+
+                    JOptionPane.showMessageDialog(this, "นำเข้าข้อมูลจากไฟล์เรียบร้อยแล้ว");
+
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "อ่านไฟล์ไม่สำเร็จ: " + ex.getMessage(), "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        // ========================================================
 
         // [Logic ปุ่ม Post]
         btnPost.addActionListener(e -> {

@@ -326,6 +326,7 @@ public class Workmenu extends JFrame {
         });
 
         deleteBtn.addActionListener(e -> {
+            CompletedAssignment com = new CompletedAssignment();
             if (currentSelectedJob != null) {
                 int confirm = JOptionPane.showConfirmDialog(
                         this,
@@ -333,12 +334,31 @@ public class Workmenu extends JFrame {
                         "ยืนยันการลบ",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.WARNING_MESSAGE);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    JOptionPane.showMessageDialog(this, "ฟีเจอร์ลบงานยังไม่เปิดใช้งาน (Demo)");
-                }
             } else {
                 JOptionPane.showMessageDialog(this, "กรุณาเลือกงานก่อนลบ");
             }
+            boolean success = com.submitComplete(Unique,"cancelled");
+
+            if(success){
+                try {
+                    int jobIdInt = Integer.parseInt(Unique);
+                    com.updateAllWorkersStatus(jobIdInt);
+
+                    JOptionPane.showMessageDialog(this,
+                            "ทำการลบเสร็จสิ้นสำเร็จ! อัปเดต Profile ของผู้รับงานทั้งหมดแล้ว",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+
+                    // Refresh UI
+                    dispose();
+                    new Workmenu().setVisible(true);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Job ID ไม่ถูกต้อง", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "ไม่สามารถบันทึกได้", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
         });
 
         btnPanel.add(completeBtn);

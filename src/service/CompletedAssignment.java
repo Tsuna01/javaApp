@@ -183,4 +183,5 @@ public class CompletedAssignment extends JobAssignmentService {
             pstmtUpdate.executeUpdate();
         }
     }
+
 }

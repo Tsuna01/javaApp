@@ -9,14 +9,17 @@ import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.List;
 import javax.imageio.ImageIO;
 
 import model.Profiles;
 import service.API;
 import service.Auth;
 import service.User;
-import service.ProfileService; // Import Service
+import service.ProfileService;
 
 public class ProfileEditor extends JFrame {
 
@@ -31,7 +34,7 @@ public class ProfileEditor extends JFrame {
     private JTextField emailField;
     private JTextArea bioArea;
     private JLabel avatarLarge;
-    private File selectedImageFile; // ไฟล์รูปที่ถูกเลือกเตรียมอัปโหลด
+    private File selectedImageFile;
 
     public ProfileEditor() {
         initialize();
@@ -56,7 +59,6 @@ public class ProfileEditor extends JFrame {
     }
 
     private JPanel createEditorCard() {
-        // ... (ส่วนการวาด Card เหมือนเดิม ละไว้เพื่อความกระชับ) ...
         JPanel card = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -107,10 +109,66 @@ public class ProfileEditor extends JFrame {
         // ปุ่ม Upload Image
         JButton uploadImgBtn = createUploadButton("Upload Image");
         uploadImgBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        uploadImgBtn.addActionListener(e -> handleImageUpload()); // เรียกฟังก์ชันเลือกรูป
+        uploadImgBtn.addActionListener(e -> handleImageUpload());
 
+        // ปุ่ม Upload File (แก้ไขใหม่ตามที่ขอ)
         JButton uploadFileBtn = createUploadButton("Upload File");
         uploadFileBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // ========================================================
+        // ส่วน Logic อ่านไฟล์ .txt (name=..., email=..., bio=...)
+        // ========================================================
+        uploadFileBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("เลือกไฟล์ข้อมูล (.txt)");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("Text Files (*.txt)", "txt"));
+
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                try {
+                    // อ่านทุกบรรทัด
+                    List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+
+                    StringBuilder bioBuilder = new StringBuilder();
+                    boolean isReadingBio = false;
+
+                    for (String line : lines) {
+                        String trimLine = line.trim();
+                        String lowerLine = trimLine.toLowerCase();
+
+                        if (lowerLine.startsWith("name=")) {
+                            // ตัดคำว่า name= ออก (5 ตัวอักษร)
+                            nameField.setText(trimLine.substring(5).trim());
+                            isReadingBio = false;
+                        }
+                        else if (lowerLine.startsWith("email=")) {
+                            // ตัดคำว่า email= ออก (6 ตัวอักษร)
+                            emailField.setText(trimLine.substring(6).trim());
+                            isReadingBio = false;
+                        }
+                        else if (lowerLine.startsWith("bio=")) {
+                            // เริ่มต้นอ่าน Bio (ตัดคำว่า bio= ออก 4 ตัวอักษร)
+                            bioBuilder.append(trimLine.substring(4).trim());
+                            isReadingBio = true;
+                        }
+                        else if (isReadingBio) {
+                            // อ่านบรรทัดต่อมาของ Bio
+                            bioBuilder.append("\n").append(line);
+                        }
+                    }
+
+                    // แสดง Bio ที่รวมได้
+                    bioArea.setText(bioBuilder.toString());
+
+                    JOptionPane.showMessageDialog(this, "อ่านข้อมูลจากไฟล์เรียบร้อยแล้ว");
+
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "อ่านไฟล์ไม่สำเร็จ: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        // ========================================================
 
         leftCol.add(avatarLarge);
         leftCol.add(Box.createVerticalStrut(20));
@@ -153,7 +211,6 @@ public class ProfileEditor extends JFrame {
             if (tempBio != null && !tempBio.equals("null") && !tempBio.trim().isEmpty()) {
                 BIO = tempBio;
             }
-            // TODO: ถ้ามีรูปเก่า อาจจะโหลดมาแสดงที่ avatarLarge ตรงนี้ด้วย
         }
 
         bioArea = new JTextArea(BIO);
@@ -174,39 +231,31 @@ public class ProfileEditor extends JFrame {
         JButton cancelBtn = createActionButton("Cancel", false);
         JButton saveBtn = createActionButton("SAVE", true);
 
-        // ==========================================================
-        // ส่วน Logic ปุ่ม SAVE ที่เพิ่มการบันทึกรูป
-        // ==========================================================
+        // Logic Save
         saveBtn.addActionListener(e -> {
-            // 1. ตรวจสอบข้อมูล Text
             if (nameField.getText().trim().isEmpty() || emailField.getText().trim().isEmpty()) {
                 JOptionPane.showMessageDialog(this, "กรุณากรอกชื่อและอีเมล", "แจ้งเตือน", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // 2. เตรียม Object User สำหรับ Text Update
             User userToUpdate = Auth.getAuthUser();
             userToUpdate.setName(nameField.getText().trim());
             userToUpdate.setEmail(emailField.getText().trim());
             String bioText = bioArea.getText();
 
-            // 3. ทำการบันทึก Text Profile
             boolean textSuccess = ProfileService.updateProfile(userToUpdate, bioText);
             boolean imageSuccess = true;
             if (selectedImageFile != null) {
                 String savedPath = saveImageToLocal(selectedImageFile, userToUpdate.getId());
-
                 if (savedPath != null) {
-                    // บันทึก Path ลง Database
                     imageSuccess = ProfileService.updateImage(userToUpdate, savedPath);
                 } else {
                     imageSuccess = false;
                 }
             }
 
-            // 5. แจ้งผลลัพธ์
             if (textSuccess && imageSuccess) {
-                JOptionPane.showMessageDialog(this, "บันทึกข้อมูลและรูปภาพสำเร็จ!");
+                JOptionPane.showMessageDialog(this, "บันทึกข้อมูลสำเร็จ!");
                 new Profile().setVisible(true);
                 dispose();
             } else if (textSuccess) {
@@ -228,9 +277,6 @@ public class ProfileEditor extends JFrame {
         return card;
     }
 
-    // ==========================================================
-    // Method เลือกรูปภาพ
-    // ==========================================================
     private void handleImageUpload() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("เลือกรูปภาพโปรไฟล์");
@@ -243,8 +289,6 @@ public class ProfileEditor extends JFrame {
             try {
                 BufferedImage originalImage = ImageIO.read(selectedImageFile);
                 if (originalImage == null) return;
-
-                // Preview รูปทันที
                 Image scaledImage = originalImage.getScaledInstance(150, 150, Image.SCALE_SMOOTH);
                 avatarLarge.setIcon(new ImageIcon(scaledImage));
             } catch (IOException ex) {
@@ -253,31 +297,17 @@ public class ProfileEditor extends JFrame {
         }
     }
 
-    // ==========================================================
-    // [เพิ่มใหม่] Method บันทึกไฟล์รูปภาพลงเครื่อง (Folder: user_images)
-    // ==========================================================
     private String saveImageToLocal(File sourceFile, int userId) {
         try {
-            // 1. สร้าง Folder เก็บรูป (ถ้ายังไม่มี)
             File directory = new File("user_images");
             if (!directory.exists()) {
                 directory.mkdir();
             }
-
-            // 2. กำหนดชื่อไฟล์ใหม่ (ใช้ ID เพื่อไม่ให้ไฟล์ซ้ำกัน) -> profile_101.png
             String newFileName = "profile_" + userId + ".png";
             File destFile = new File(directory, newFileName);
-
-            // 3. อ่านรูปจากไฟล์ต้นฉบับ
             BufferedImage image = ImageIO.read(sourceFile);
-
-            // 4. เขียนรูปลงไฟล์ใหม่ (บังคับเป็น PNG)
             ImageIO.write(image, "png", destFile);
-
-            // 5. คืนค่า Path เพื่อนำไปลง Database (ใช้ path แบบ relative หรือ absolute ตามต้องการ)
-            // ในที่นี้ส่งกลับเป็น Path ของไฟล์ที่เซฟไป
             return destFile.getPath().replace("\\", "/");
-
         } catch (IOException e) {
             System.err.println("Error saving image: " + e.getMessage());
             e.printStackTrace();
@@ -285,7 +315,7 @@ public class ProfileEditor extends JFrame {
         }
     }
 
-    // ========= COMPONENTS (Helper Methods) ==========
+    // ========= COMPONENTS ==========
     private JPanel createLabeledInput(String labelText, String value) {
         JPanel panel = new JPanel(new BorderLayout(0, 5));
         panel.setOpaque(false);

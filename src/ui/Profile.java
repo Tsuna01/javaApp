@@ -97,10 +97,6 @@ public class Profile extends JFrame {
         topBar.setOpaque(false);
         topBar.setBorder(new EmptyBorder(0, 0, 20, 0));
 
-        JButton backBtn = createBackButton();
-        backBtn.addActionListener(e -> dispose());
-        topBar.add(backBtn);
-
         body.add(topBar, BorderLayout.NORTH);
 
         // Profile Card
@@ -349,30 +345,6 @@ public class Profile extends JFrame {
             }
         }
         return new ImageIcon(createPlaceholderImage(size, new Color(255, 182, 193))); // สีชมพูอ่อน
-    }
-
-    private JButton createBackButton() {
-        JButton btn = new JButton("← Back") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
-                g2.setColor(Color.BLACK);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
-                super.paintComponent(g2);
-                g2.dispose();
-            }
-        };
-        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btn.setForeground(Color.BLACK);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(100, 40));
-        return btn;
     }
 
     private JButton createPillButton(String text) {

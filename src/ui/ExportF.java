@@ -8,18 +8,17 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
-import java.awt.print.PageFormat;
-import java.awt.print.Printable;
-import java.awt.print.PrinterException;
-import java.awt.print.PrinterJob;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.text.SimpleDateFormat;
 
-import service.API;
 import service.Auth;
-import service.Student;
-import service.User;
+import service.DatabaseConnection;
 import ui.component.Navbar;
-
-import java.util.ArrayList;
 
 public class ExportF extends JFrame {
 
@@ -34,9 +33,8 @@ public class ExportF extends JFrame {
     private static final Font FONT_INFO = new Font("Tahoma", Font.PLAIN, 12);
 
     private JPanel contentPanel;
-
-    // [New] ประกาศตัวแปร label ยอดเงินไว้ตรงนี้ เพื่อให้ method อื่นเรียกใช้ได้
     private JLabel totalAmountLabel;
+    private DefaultTableModel model;
 
     public ExportF() {
         initialize();
@@ -62,11 +60,13 @@ public class ExportF extends JFrame {
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(20, 50, 20, 50));
 
-        // Button Section (Back & Print)
         content.add(createButtonSection(), BorderLayout.NORTH);
 
-        // Payment Statement Content
         contentPanel = createPaymentStatement();
+
+        // โหลดข้อมูล
+        loadDataFromDatabase();
+
         JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
@@ -78,7 +78,57 @@ public class ExportF extends JFrame {
         mainPanel.add(content, BorderLayout.CENTER);
     }
 
-    // ... (createButtonSection code remains the same) ...
+    // ========= [ส่วนที่แก้ไข] เพิ่มการกรอง job_type != 'volunteer' ==========
+    private void loadDataFromDatabase() {
+        if (Auth.getAuthUser() == null)
+            return;
+
+        String stdId = Auth.getAuthUser().getStd_id();
+
+        if (model == null)
+            return;
+        model.setRowCount(0);
+
+        // SQL: เพิ่มเงื่อนไข AND j.job_type != 'volunteer'
+        String sql = "SELECT ja.finished_at, j.title, ja.hours_amount, ja.reward_amount " +
+                "FROM job_assignment ja " +
+                "JOIN job j ON ja.job_id = j.job_id " +
+                "WHERE ja.std_id = ? " +
+                "AND ja.status = 'complete' " +
+                "AND j.job_type != 'volunteer'"; // <-- กรองงานจิตอาสาออก
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, stdId);
+            ResultSet rs = pstmt.executeQuery();
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("d/M/yyyy");
+
+            while (rs.next()) {
+                Boolean checked = false;
+                java.sql.Timestamp ts = rs.getTimestamp("finished_at");
+                String dateStr = (ts != null) ? dateFormat.format(ts) : "-";
+                String jobName = rs.getString("title");
+                String hours = String.valueOf(rs.getInt("hours_amount"));
+
+                double reward = rs.getDouble("reward_amount");
+                String amountStr;
+                if (rs.wasNull()) {
+                    amountStr = "0";
+                } else {
+                    amountStr = String.valueOf((int) reward);
+                }
+
+                model.addRow(new Object[] { checked, dateStr, jobName, hours, amountStr });
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error loading data: " + e.getMessage());
+        }
+    }
+
     private JPanel createButtonSection() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
@@ -86,7 +136,6 @@ public class ExportF extends JFrame {
 
         JButton backBtn = createRoundedButton("← Back", Color.BLACK, Color.WHITE, false);
         backBtn.addActionListener(e -> {
-            new Profile().setVisible(true);
             dispose();
         });
 
@@ -107,7 +156,6 @@ public class ExportF extends JFrame {
         return panel;
     }
 
-    // ========= PAYMENT STATEMENT ==========
     private JPanel createPaymentStatement() {
         JPanel statement = new JPanel() {
             @Override
@@ -127,21 +175,16 @@ public class ExportF extends JFrame {
 
         statement.add(createTitleSection());
         statement.add(Box.createVerticalStrut(20));
-
-        statement.add(createPaymentTable()); // สร้างตาราง
+        statement.add(createPaymentTable());
         statement.add(Box.createVerticalStrut(20));
-
-        statement.add(createTotalSection()); // สร้างส่วนแสดงผลรวม
+        statement.add(createTotalSection());
         statement.add(Box.createVerticalStrut(30));
-
         statement.add(createSignatureSection());
 
         return statement;
     }
 
-    // ... (createTitleSection remains the same) ...
     private JPanel createTitleSection() {
-        // (Copy เดิมมาได้เลย หรือใช้ของเดิม)
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
@@ -171,24 +214,27 @@ public class ExportF extends JFrame {
         payee.setFont(FONT_INFO);
         payee.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        String username = Auth.getAuthUser().getName();
-        String STD = Auth.getAuthUser().getStd_id();
-        if (username.equals("admin")) {
-            STD = String.valueOf(Auth.getAuthUser().getId());
-        } else {
-            STD = Auth.getAuthUser().getStd_id();
+        String username = "Unknown";
+        String stdIdShow = "-";
+
+        if (Auth.getAuthUser() != null) {
+            username = Auth.getAuthUser().getName();
+            if ("admin".equals(username)) {
+                stdIdShow = String.valueOf(Auth.getAuthUser().getId());
+            } else {
+                stdIdShow = Auth.getAuthUser().getStd_id();
+            }
         }
 
         JLabel id = new JLabel(username);
         id.setFont(FONT_INFO);
         id.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JLabel idNumber = new JLabel(STD);
+        JLabel idNumber = new JLabel(stdIdShow);
         idNumber.setFont(FONT_INFO);
         idNumber.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
         java.time.LocalDate today = java.time.LocalDate.now();
-
         int d = today.getDayOfMonth();
         int m = today.getMonthValue();
         int y = today.getYear() + 543;
@@ -210,18 +256,15 @@ public class ExportF extends JFrame {
         return panel;
     }
 
-    // ========= PAYMENT TABLE ==========
     private JPanel createPaymentTable() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
 
         String[] columns = { "", "วันที่", "รายการงาน (Description)", "ชม.", "จำนวนเงิน (บาท)" };
+        Object[][] data = {};
 
-        // ดึงข้อมูลจากฐานข้อมูลโดยใช้ generateExportData pattern
-        Object[][] data = loadExportDataFromDB();
-
-        DefaultTableModel model = new DefaultTableModel(data, columns) {
+        model = new DefaultTableModel(data, columns) {
             @Override
             public Class<?> getColumnClass(int column) {
                 if (column == 0)
@@ -235,11 +278,9 @@ public class ExportF extends JFrame {
             }
         };
 
-        // [New] เพิ่ม Listener เพื่อดักจับการเปลี่ยนแปลงค่าในตาราง (Checkbox)
         model.addTableModelListener(new TableModelListener() {
             @Override
             public void tableChanged(TableModelEvent e) {
-                // ถ้ามีการอัพเดทค่า (e.getType() == TableModelEvent.UPDATE)
                 calculateTotalAmount(model);
             }
         });
@@ -252,7 +293,6 @@ public class ExportF extends JFrame {
         table.setBackground(Color.WHITE);
         table.setSelectionBackground(new Color(255, 240, 245));
 
-        // Styling headers and columns...
         JTableHeader header = table.getTableHeader();
         header.setFont(FONT_TABLE_HEADER);
         header.setBackground(Color.WHITE);
@@ -279,78 +319,24 @@ public class ExportF extends JFrame {
         return panel;
     }
 
-    /**
-     * ดึงข้อมูลสำหรับ Export จากฐานข้อมูล โดยใช้ generateExportData pattern
-     */
-    private Object[][] loadExportDataFromDB() {
-        // ดึง std_id ของ user ที่ login อยู่
-        String stdId = null;
-        User currentUser = Auth.getAuthUser();
-
-        if (currentUser instanceof Student) {
-            stdId = ((Student) currentUser).getStdId();
-        } else if (currentUser != null) {
-            stdId = currentUser.getStd_id();
-        }
-
-        // ถ้าไม่มี std_id ให้ return empty array
-        if (stdId == null || stdId.isEmpty()) {
-            return new Object[][] {
-                    { false, "-", "ไม่พบข้อมูล (กรุณา Login ด้วยบัญชีนักศึกษา)", "-", "0" }
-            };
-        }
-
-        // ดึงข้อมูลจาก API
-        ArrayList<String[]> assignments = API.getCompletedAssignmentsForExport(stdId);
-
-        if (assignments == null || assignments.isEmpty()) {
-            return new Object[][] {
-                    { false, "-", "ยังไม่มีงานที่เสร็จสิ้น", "0", "0" }
-            };
-        }
-
-        // แปลง ArrayList<String[]> เป็น Object[][]
-        Object[][] data = new Object[assignments.size()][5];
-        for (int i = 0; i < assignments.size(); i++) {
-            String[] row = assignments.get(i);
-            data[i][0] = false; // Checkbox
-            data[i][1] = row[0]; // วันที่
-            data[i][2] = row[1]; // ชื่องาน
-            data[i][3] = row[2]; // ชั่วโมง
-            data[i][4] = row[3]; // จำนวนเงิน
-        }
-
-        return data;
-    }
-
-    // [New] ฟังก์ชันคำนวณเงินรวม
     private void calculateTotalAmount(DefaultTableModel model) {
         int total = 0;
-        // วนลูปทุกแถว
         for (int i = 0; i < model.getRowCount(); i++) {
-            // ดึงค่า Checkbox (Column 0)
             Boolean isChecked = (Boolean) model.getValueAt(i, 0);
-
             if (isChecked != null && isChecked) {
-                // ถ้าติ๊กถูก ให้ดึงค่าเงิน (Column 4) มาบวก
                 try {
                     String amountStr = (String) model.getValueAt(i, 4);
-                    // ลบช่องว่างหรือตัวอักษรที่ไม่ใช่ตัวเลขออก (ถ้ามี) แล้วแปลงเป็น int
                     int amount = Integer.parseInt(amountStr.trim());
                     total += amount;
                 } catch (NumberFormatException ex) {
-                    System.err.println("Error parsing amount at row " + i);
                 }
             }
         }
-
-        // อัพเดท Label ยอดรวม
         if (totalAmountLabel != null) {
             totalAmountLabel.setText(String.valueOf(total));
         }
     }
 
-    // ========= TOTAL SECTION ==========
     private JPanel createTotalSection() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         panel.setOpaque(false);
@@ -359,7 +345,6 @@ public class ExportF extends JFrame {
         JLabel totalLabel = new JLabel("รวมเงินเงินทั้งสิ้น (Total Amount)");
         totalLabel.setFont(new Font("Tahoma", Font.BOLD, 14));
 
-        // [Modified] ใช้ตัวแปร Global แทน และตั้งค่าเริ่มต้นเป็น 0
         totalAmountLabel = new JLabel("0");
         totalAmountLabel.setFont(new Font("Tahoma", Font.BOLD, 14));
 
@@ -369,8 +354,6 @@ public class ExportF extends JFrame {
         return panel;
     }
 
-    // ... (createSignatureSection, createRoundedButton, printPaymentStatement code
-    // remains same) ...
     private JPanel createSignatureSection() {
         JPanel panel = new JPanel(new GridLayout(1, 2, 50, 0));
         panel.setOpaque(false);
@@ -438,30 +421,64 @@ public class ExportF extends JFrame {
     }
 
     private void printPaymentStatement() {
-        PrinterJob job = PrinterJob.getPrinterJob();
-        job.setPrintable(new Printable() {
-            @Override
-            public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
-                if (pageIndex > 0)
-                    return NO_SUCH_PAGE;
-                Graphics2D g2d = (Graphics2D) graphics;
-                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-                double scaleX = pageFormat.getImageableWidth() / contentPanel.getWidth();
-                double scaleY = pageFormat.getImageableHeight() / contentPanel.getHeight();
-                double scale = Math.min(scaleX, scaleY);
-                g2d.scale(scale, scale);
-                contentPanel.printAll(graphics);
-                return PAGE_EXISTS;
+        // ตรวจสอบว่ามีรายการที่เลือกหรือไม่
+        boolean hasSelected = false;
+        for (int i = 0; i < model.getRowCount(); i++) {
+            Boolean isChecked = (Boolean) model.getValueAt(i, 0);
+            if (isChecked != null && isChecked) {
+                hasSelected = true;
+                break;
             }
-        });
-        boolean doPrint = job.printDialog();
-        if (doPrint) {
+        }
+
+        if (!hasSelected) {
+            JOptionPane.showMessageDialog(this, "กรุณาเลือกรายการที่ต้องการ Export อย่างน้อย 1 รายการ", "Warning",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Render contentPanel เป็นรูปภาพ
+        int width = contentPanel.getWidth();
+        int height = contentPanel.getHeight();
+
+        if (width <= 0 || height <= 0) {
+            width = 900;
+            height = 700;
+            contentPanel.setSize(width, height);
+            contentPanel.doLayout();
+        }
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = image.createGraphics();
+
+        // ตั้งค่า rendering
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+        // วาด contentPanel ลงบน image
+        contentPanel.paint(g2d);
+        g2d.dispose();
+
+        // บันทึกไฟล์
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("บันทึกเป็น PNG");
+        fileChooser.setSelectedFile(new File("PaymentStatement.png"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            String filePath = fileToSave.getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".png")) {
+                fileToSave = new File(filePath + ".png");
+            }
+
             try {
-                job.print();
-                JOptionPane.showMessageDialog(this, "พิมพ์เอกสารสำเร็จ!", "Print Success",
+                ImageIO.write(image, "png", fileToSave);
+                JOptionPane.showMessageDialog(this, "บันทึกสำเร็จ!\n" + fileToSave.getAbsolutePath(), "Success",
                         JOptionPane.INFORMATION_MESSAGE);
-            } catch (PrinterException e) {
-                JOptionPane.showMessageDialog(this, "เกิดข้อผิดพลาดในการพิมพ์: " + e.getMessage(), "Print Error",
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "เกิดข้อผิดพลาด: " + e.getMessage(), "Error",
                         JOptionPane.ERROR_MESSAGE);
             }
         }
