@@ -136,6 +136,7 @@ public class ExportF extends JFrame {
 
         JButton backBtn = createRoundedButton("← Back", Color.BLACK, Color.WHITE, false);
         backBtn.addActionListener(e -> {
+            new Profile().setVisible(true);
             dispose();
         });
 

@@ -40,13 +40,13 @@ public class AddEvent extends JFrame {
     // Components
     private JLabel imageLabel;
     private JTextField titleField, vacanciesField, workingHoursField, paymentField;
-    private JTextField timeField;
+    private JSpinner timeSpinner;
     private JSpinner dateSpinner;
 
     // [เพิ่ม] Components สำหรับ End Date
     private JCheckBox chkEndDate;
     private JSpinner endDateSpinner;
-    private JTextField endTimeField; // เพิ่ม time field
+    private JSpinner endTimeSpinner; // เปลี่ยนเป็น Spinner
 
     private JTextArea locationField, detailsArea;
     private JLabel previewText;
@@ -185,7 +185,7 @@ public class AddEvent extends JFrame {
                                     Date date = inputFormat.parse(parts[0]);
                                     dateSpinner.setValue(date);
                                     if (parts.length > 1) {
-                                        timeField.setText(parts[1]);
+                                        setTimeSpinnerValue(timeSpinner, parts[1]);
                                     }
                                 } else {
                                     Date date = inputFormat.parse(dateTimeValue);
@@ -201,7 +201,7 @@ public class AddEvent extends JFrame {
                             if (!endDateValue.isEmpty() && !endDateValue.equalsIgnoreCase("null")) {
                                 chkEndDate.setSelected(true);
                                 endDateSpinner.setEnabled(true);
-                                endTimeField.setEnabled(true);
+                                endTimeSpinner.setEnabled(true);
                                 try {
                                     SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
                                     if (endDateValue.contains(" ")) {
@@ -209,7 +209,7 @@ public class AddEvent extends JFrame {
                                         Date date = inputFormat.parse(parts[0]);
                                         endDateSpinner.setValue(date);
                                         if (parts.length > 1) {
-                                            endTimeField.setText(parts[1]);
+                                            setTimeSpinnerValue(endTimeSpinner, parts[1]);
                                         }
                                     } else {
                                         Date date = inputFormat.parse(endDateValue);
@@ -279,7 +279,7 @@ public class AddEvent extends JFrame {
                 Date date = (Date) dateSpinner.getValue();
                 String dateStr = dateFormat.format(date);
 
-                String timeStr = timeField.getText().trim();
+                String timeStr = getTimeFromSpinner(timeSpinner);
                 if (timeStr.isEmpty())
                     timeStr = "00:00:00";
                 if (timeStr.length() == 5)
@@ -297,8 +297,8 @@ public class AddEvent extends JFrame {
                     Date endDate = (Date) endDateSpinner.getValue();
                     String endDateStr = dateFormat.format(endDate);
 
-                    // ดึงเวลาสิ้นสุดจาก endTimeField
-                    String endTimeStr = endTimeField.getText().trim();
+                    // ดึงเวลาสิ้นสุดจาก endTimeSpinner
+                    String endTimeStr = getTimeFromSpinner(endTimeSpinner);
                     if (endTimeStr.isEmpty())
                         endTimeStr = "23:59:59";
                     if (endTimeStr.length() == 5)
@@ -403,13 +403,17 @@ public class AddEvent extends JFrame {
         dateSpinner.setPreferredSize(new Dimension(120, 35));
         dateSpinner.setFont(INPUT_FONT);
 
-        timeField = createTextField();
-        timeField.setPreferredSize(new Dimension(80, 35));
-        timeField.setToolTipText("HH:MM");
+        JLabel startTimeLabel = createLabel("Start Time :");
+        startTimeLabel.setBorder(new EmptyBorder(0, 15, 0, 5));
+
+        timeSpinner = new JSpinner(new SpinnerDateModel());
+        timeSpinner.setEditor(new JSpinner.DateEditor(timeSpinner, "HH:mm"));
+        timeSpinner.setPreferredSize(new Dimension(80, 35));
+        timeSpinner.setFont(INPUT_FONT);
 
         dateTimePanel.add(dateSpinner);
-        dateTimePanel.add(Box.createHorizontalStrut(10));
-        dateTimePanel.add(timeField);
+        dateTimePanel.add(startTimeLabel);
+        dateTimePanel.add(timeSpinner);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
@@ -436,15 +440,16 @@ public class AddEvent extends JFrame {
         endDateSpinner.setEnabled(false);
 
         // เพิ่ม time field สำหรับ end date
-        endTimeField = createTextField();
-        endTimeField.setPreferredSize(new Dimension(80, 35));
-        endTimeField.setToolTipText("HH:MM");
-        endTimeField.setEnabled(false);
-        endTimeField.setText("23:59");
+        endTimeSpinner = new JSpinner(new SpinnerDateModel());
+        endTimeSpinner.setEditor(new JSpinner.DateEditor(endTimeSpinner, "HH:mm"));
+        endTimeSpinner.setPreferredSize(new Dimension(80, 35));
+        endTimeSpinner.setFont(INPUT_FONT);
+        endTimeSpinner.setEnabled(false);
+        setTimeSpinnerValue(endTimeSpinner, "23:59");
 
         chkEndDate.addActionListener(e -> {
             endDateSpinner.setEnabled(chkEndDate.isSelected());
-            endTimeField.setEnabled(chkEndDate.isSelected());
+            endTimeSpinner.setEnabled(chkEndDate.isSelected());
             updatePreview();
         });
 
@@ -452,7 +457,7 @@ public class AddEvent extends JFrame {
         endDatePanel.add(Box.createHorizontalStrut(10));
         endDatePanel.add(endDateSpinner);
         endDatePanel.add(Box.createHorizontalStrut(5));
-        endDatePanel.add(endTimeField);
+        endDatePanel.add(endTimeSpinner);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
@@ -686,6 +691,29 @@ public class AddEvent extends JFrame {
 
     // --- Logic ---
 
+    // Helper method สำหรับตั้งค่าเวลาใน Spinner
+    private void setTimeSpinnerValue(JSpinner spinner, String timeStr) {
+        try {
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+            Date time = timeFormat.parse(timeStr);
+            spinner.setValue(time);
+        } catch (Exception e) {
+            // ถ้า parse ไม่ได้ ใช้ค่าเริ่มต้น
+            try {
+                SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+                spinner.setValue(timeFormat.parse("00:00"));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    // Helper method สำหรับดึงค่าเวลาจาก Spinner
+    private String getTimeFromSpinner(JSpinner spinner) {
+        Date time = (Date) spinner.getValue();
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+        return timeFormat.format(time);
+    }
+
     private void togglePayment(boolean show) {
         paymentField.setVisible(show);
         paymentField.setEnabled(show);
@@ -701,7 +729,7 @@ public class AddEvent extends JFrame {
         workingHoursField.setText("");
         detailsArea.setText("");
         paymentField.setText("");
-        timeField.setText("");
+        setTimeSpinnerValue(timeSpinner, "00:00");
         noButton.setSelected(true);
         togglePayment(false);
         imageLabel.setIcon(null);
@@ -712,8 +740,8 @@ public class AddEvent extends JFrame {
         // [เพิ่ม] Reset End Date
         chkEndDate.setSelected(false);
         endDateSpinner.setEnabled(false);
-        endTimeField.setEnabled(false);
-        endTimeField.setText("23:59");
+        endTimeSpinner.setEnabled(false);
+        setTimeSpinnerValue(endTimeSpinner, "23:59");
 
         updatePreview();
     }
@@ -764,12 +792,13 @@ public class AddEvent extends JFrame {
         locationField.getDocument().addDocumentListener(listener);
         workingHoursField.getDocument().addDocumentListener(listener);
         paymentField.getDocument().addDocumentListener(listener);
-        timeField.getDocument().addDocumentListener(listener);
+        // ใช้ ChangeListener แทน DocumentListener สำหรับ Spinner
 
         dateSpinner.addChangeListener(e -> updatePreview());
         // [เพิ่ม] Listener สำหรับ End Date
         endDateSpinner.addChangeListener(e -> updatePreview());
-        endTimeField.getDocument().addDocumentListener(listener);
+        timeSpinner.addChangeListener(e -> updatePreview());
+        endTimeSpinner.addChangeListener(e -> updatePreview());
 
         updatePreview();
     }
@@ -777,13 +806,13 @@ public class AddEvent extends JFrame {
     private void updatePreview() {
         JSpinner.DateEditor dateEditor = (JSpinner.DateEditor) dateSpinner.getEditor();
         String dateText = dateEditor.getTextField().getText();
-        String timeText = timeField.getText();
+        String timeText = getTimeFromSpinner(timeSpinner);
 
         // [เพิ่ม] Logic แสดง End Date ในพรีวิว
         String endDateText = "";
         if (chkEndDate.isSelected()) {
             JSpinner.DateEditor endDateEditor = (JSpinner.DateEditor) endDateSpinner.getEditor();
-            endDateText = " - " + endDateEditor.getTextField().getText() + " " + endTimeField.getText();
+            endDateText = " - " + endDateEditor.getTextField().getText() + " " + getTimeFromSpinner(endTimeSpinner);
         }
 
         String paymentText = noButton.isSelected() ? "Unpaid" : paymentField.getText() + " Baht/hr";
@@ -794,7 +823,7 @@ public class AddEvent extends JFrame {
                 + "<div style='font-size:10px; color:#555;'>"
                 + "<b>Vacancies:</b> " + vacanciesField.getText() + "<br>"
                 + "<b>Date:</b> " + dateText + endDateText + "<br>" // แสดงวันสิ้นสุด
-                + "<b>Time:</b> " + timeText + "<br>"
+                + "<b>Start at:</b> " + timeText + "<br>"
                 + "<b>Loc:</b> " + locationField.getText().replace("\n", " ") + "<br>"
                 + "<b>Hours:</b> " + workingHoursField.getText() + "<br>"
                 + "<b>Pay:</b> <span style='color:" + (noButton.isSelected() ? "red" : "green") + ";'>" + paymentText

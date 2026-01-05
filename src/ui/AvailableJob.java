@@ -19,6 +19,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+import model.PaidJobEntity;
 import service.*;
 import ui.component.FilterUI;
 import ui.component.Navbar;
@@ -370,9 +371,9 @@ public class AvailableJob extends JFrame {
         if (jobsToShow == null || jobsToShow.isEmpty()) {
             showEmptyMessage();
         } else {
-            // กรองงานที่ status เป็น "complete" ออก
+            // แสดงเฉพาะงานที่ status เป็น "pending" เท่านั้น
             List<API> filteredJobs = jobsToShow.stream()
-                    .filter(job -> !"complete".equalsIgnoreCase(safe(job.status)))
+                    .filter(job -> "pending".equalsIgnoreCase(safe(job.status)))
                     .collect(Collectors.toList());
 
             if (filteredJobs.isEmpty()) {
@@ -433,6 +434,19 @@ public class AvailableJob extends JFrame {
         String titleText = safe(work.title);
         String locationText = safe(work.location);
         String typeText = safe(work.jobType);
+
+       ArrayList<PaidJobEntity> paid = API.getPaidJob(work.jobId);
+        int hoursRate = 0;
+        for(PaidJobEntity i:paid){
+            hoursRate = i.getHourRate();
+
+        }
+        String HoursRate = Integer.toString(hoursRate);
+        if (typeText != null && typeText.equalsIgnoreCase("paid")) {
+            typeText = "งานมีค่าตอบแทน " + HoursRate + " บาท/ชั่วโมง";
+        } else if (typeText != null && typeText.equalsIgnoreCase("volunteer")) {
+            typeText = "งานจิตอาสา";
+        }
 
         String[] dateParts = splitDateTime(work.dateTime);
         String dateStr = dateParts[0];

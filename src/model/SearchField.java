@@ -1,4 +1,4 @@
-package service;
+package model;
 
 public enum SearchField {
     JOBID, TITLE, DETAILS, LOCATION,

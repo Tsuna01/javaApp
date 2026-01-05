@@ -1,9 +1,6 @@
 package service;
 
-import model.JobAssignment;
-import model.JobAssignmentEntity;
-import model.Profiles;
-import model.ProfilesEntity;
+import model.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -181,6 +178,60 @@ public class API {
             e.printStackTrace();
         }
         return list;
+    }
+
+    public static ArrayList<HistoryEntity> getHistory(String stdId){
+        ArrayList<HistoryEntity> list = new ArrayList<>();
+        String sql = "SELECT * FROM history WHERE std_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, stdId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    HistoryEntity history = new HistoryEntity();
+                    history.setLogId(rs.getInt("log_id"));
+                    history.setStdId(rs.getString("std_id"));
+                    history.setJobId(rs.getInt("job_id"));
+                    history.setStatus(rs.getString("status"));
+                    history.setCreateAt(rs.getString("create_at"));
+                    history.setHours(rs.getInt("hours"));
+                    list.add(history);
+
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("ERROR in getHistory: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+
+    }
+
+    public  static  ArrayList<PaidJobEntity> getPaidJob(String jobId){
+        ArrayList<PaidJobEntity> list = new ArrayList<>();
+        String sql = "SELECT * FROM paid_jobs WHERE job_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, jobId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    PaidJobEntity paid = new PaidJobEntity();
+                    paid.setJobId(rs.getInt("job_id"));
+                    paid.setHourRate(rs.getInt("hour_rate"));
+                    paid.setUserId(rs.getInt("user_id"));
+
+                    list.add(paid);
+
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("ERROR in getPaidJob: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+
     }
 
     public static boolean saveProfile(int userId, String bio, String imagePath) {

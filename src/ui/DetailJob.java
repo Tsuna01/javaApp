@@ -9,6 +9,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
+import model.PaidJobEntity;
 import service.API;
 import service.Auth;
 import service.JobManager;
@@ -51,46 +52,11 @@ public class DetailJob extends JFrame {
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(30, 50, 30, 50));
 
-        // Back Button
-        content.add(createBackButton(), BorderLayout.NORTH);
 
         // Job Detail Card
         content.add(createJobDetailCard(), BorderLayout.CENTER);
 
         mainPanel.add(content, BorderLayout.CENTER);
-    }
-
-    // ========= BACK BUTTON ==========
-    private JPanel createBackButton() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 10));
-        panel.setOpaque(false);
-
-        JButton backBtn = new JButton("← Back") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
-                g2.setColor(Color.BLACK);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 25, 25);
-                super.paintComponent(g2);
-                g2.dispose();
-            }
-        };
-        backBtn.setFont(FONT_BACK);
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setContentAreaFilled(false);
-        backBtn.setBorderPainted(false);
-        backBtn.setPreferredSize(new Dimension(100, 35));
-        backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backBtn.addActionListener(e -> {
-            new AvailableJob().setVisible(true);
-            dispose();
-        });
-
-        panel.add(backBtn);
-        return panel;
     }
 
     // ========= JOB DETAIL CARD ==========
@@ -126,6 +92,7 @@ public class DetailJob extends JFrame {
         String imagePath = null;
         String endDate = ""; // เพิ่ม endDate
         int hoursInt = 0;
+
 
         if (job != null && !job.isEmpty()) {
             for (API i : job) {
@@ -238,11 +205,18 @@ public class DetailJob extends JFrame {
             default:
                 MM_Text = "ไม่ทราบเดือน";
         }
+        ArrayList<PaidJobEntity> paid = API.getPaidJob(jobid);
+        int hoursRate = 0;
+        for(PaidJobEntity i:paid){
+            hoursRate = i.getHourRate();
+
+        }
+        String HoursRate = Integer.toString(hoursRate);
 
         String typeRaw = (data.size() > 4) ? data.get(4) : "";
         String typeDisplay;
         if (typeRaw != null && typeRaw.equalsIgnoreCase("paid")) {
-            typeDisplay = "งานมีค่าตอบแทน";
+            typeDisplay = "งานมีค่าตอบแทน " + HoursRate + " บาท/ชั่วโมง";
         } else if (typeRaw != null && typeRaw.equalsIgnoreCase("volunteer")) {
             typeDisplay = "งานจิตอาสา";
         } else {
@@ -270,7 +244,6 @@ public class DetailJob extends JFrame {
 
         JLabel warning = new JLabel("<html><font color='red'>🚨 รับ: " + vacancies + " อัตรา</font></html>");
         warning.setFont(new Font("Tahoma", Font.BOLD, 14));
-
         JLabel hours = new JLabel("<html>🔘 ประเภท: " + typeDisplay + " (" + workingHours + " ชม.)</html>");
         hours.setFont(FONT_TEXT);
 

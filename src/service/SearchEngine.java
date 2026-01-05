@@ -3,6 +3,7 @@ package service;
 import java.util.ArrayList;
 import java.util.List;
 import model.Job;
+import model.SearchField;
 
 public class SearchEngine {
 

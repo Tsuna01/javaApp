@@ -1,169 +1,312 @@
 package ui;
 
 import service.Auth;
-import util.ImageUtils;
 import util.RoundedLineBorder;
-import util.RoundedPanel;
 
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-
+import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.File;
 
 public class Login extends JFrame {
     public Login() {
-        setTitle("Myapp");
+        setTitle("Login");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(900, 540);
         setMinimumSize(new Dimension(780, 480));
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(Color.WHITE);
+        root.setBackground(new Color(245, 245, 245));
         setContentPane(root);
 
         // ------- MAIN (2 คอลัมน์) ------- //
         JPanel main = new JPanel(new GridBagLayout());
-        main.setBackground(new Color(248, 250, 252));
-        main.setBorder(new EmptyBorder(24, 24, 24, 24));
+        main.setBackground(new Color(245, 245, 245));
+        main.setBorder(new EmptyBorder(30, 30, 30, 30));
         GridBagConstraints gc = new GridBagConstraints();
-        gc.insets = new Insets(12, 12, 12, 12);
+        gc.insets = new Insets(0, 0, 0, 0);
         gc.fill = GridBagConstraints.BOTH;
 
-        // ------- LEFT ------- //
-        JPanel left = new JPanel(new BorderLayout());
-        left.setBackground(Color.WHITE);
-        left.setBorder(new EmptyBorder(12, 12, 12, 12));
+        // ------- LEFT (รูปมีขอบมน) ------- //
+        JPanel left = new JPanel(new BorderLayout()) {
+            private BufferedImage bgImage;
+            {
+                try {
+                    bgImage = ImageIO.read(new File("src/assets/oop.png"));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
 
-        JLabel sut = new JLabel(ImageUtils.loadScaled("assets/hero.png", 360, 280));
-        sut.setHorizontalAlignment(SwingConstants.CENTER);
-        left.add(sut, BorderLayout.CENTER);
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (bgImage != null) {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        gc.gridx = 0; gc.gridy = 0;
-        gc.weightx = 1.2; gc.weighty = 1;
+                    int w = getWidth();
+                    int h = getHeight();
+                    int radius = 24;
+
+                    // Clip เป็นมุมมน
+                    g2d.setClip(new RoundRectangle2D.Float(0, 0, w, h, radius, radius));
+
+                    // Cover scaling
+                    int imgW = bgImage.getWidth();
+                    int imgH = bgImage.getHeight();
+                    double scaleX = (double) w / imgW;
+                    double scaleY = (double) h / imgH;
+                    double scale = Math.max(scaleX, scaleY);
+                    int newW = (int) (imgW * scale);
+                    int newH = (int) (imgH * scale);
+                    int x = (w - newW) / 2;
+                    int y = (h - newH) / 2;
+
+                    g2d.drawImage(bgImage, x, y, newW, newH, this);
+                    g2d.dispose();
+                }
+            }
+        };
+        left.setOpaque(false);
+
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.weightx = 0.45;
+        gc.weighty = 1;
         main.add(left, gc);
 
-        // ------- RIGHT (การ์ดมุมมน) ------- //
-        JPanel right = new RoundedPanel(18, Color.WHITE, new Color(229, 231, 235)); // กรอบมน+เส้นขอบจาง
+        // ------- RIGHT (Form) ------- //
+        JPanel right = new JPanel();
         right.setLayout(new GridBagLayout());
-        right.setBorder(new EmptyBorder(24, 24, 24, 24));
+        right.setBackground(new Color(245, 245, 245));
+        right.setBorder(new EmptyBorder(40, 60, 40, 60));
 
         GridBagConstraints g2 = new GridBagConstraints();
         g2.gridx = 0;
         g2.fill = GridBagConstraints.HORIZONTAL;
-        g2.insets = new Insets(6, 12, 6, 12);
+        g2.insets = new Insets(4, 0, 4, 0);
         g2.weightx = 1.0;
 
-        // Header
-        JLabel h1 = new JLabel("Sign in");
-        h1.setFont(h1.getFont().deriveFont(Font.BOLD, 24f));
-        h1.setHorizontalAlignment(SwingConstants.CENTER);
-        h1.setForeground(new Color(31, 41, 55)); // slate-800
+        // Header "LOGIN"
+        JLabel h1 = new JLabel("LOGIN");
+        h1.setFont(new Font("SansSerif", Font.BOLD, 32));
+        h1.setForeground(new Color(31, 41, 55));
         g2.gridy = 0;
+        g2.insets = new Insets(0, 0, 4, 0);
         right.add(h1, g2);
 
-        // Username label
+        // Subtitle
+        JLabel subtitle = new JLabel("Enter your Email to access your account.");
+        subtitle.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        subtitle.setForeground(new Color(107, 114, 128));
         g2.gridy = 1;
-        JLabel userLabel = new JLabel("Email");
-        userLabel.setForeground(new Color(71, 85, 105)); // slate-600
-        right.add(userLabel, g2);
+        g2.insets = new Insets(0, 0, 20, 0);
+        right.add(subtitle, g2);
 
-        // Username input
+        // Email input with icon
         g2.gridy = 2;
-        JTextField txtUser = new JTextField(20);
-        txtUser.setBorder(compoundRoundedBorder(14, new Color(203, 213, 225), 2,  // เส้นขอบ
-                                                new Insets(10, 12, 10, 12)));     // padding ข้างใน
-        right.add(txtUser, g2);
+        g2.insets = new Insets(4, 0, 8, 0);
+        JPanel emailPanel = createInputWithIcon("@", "Email");
+        JTextField txtUser = (JTextField) emailPanel.getComponent(1);
+        right.add(emailPanel, g2);
 
-        // Password label
+        // Password input with icon
         g2.gridy = 3;
-        JLabel passLabel = new JLabel("Password");
-        passLabel.setForeground(new Color(71, 85, 105));
-        right.add(passLabel, g2);
+        g2.insets = new Insets(4, 0, 16, 0);
+        JPanel passPanel = createPasswordInputWithIcon();
+        JPasswordField txtPass = (JPasswordField) passPanel.getComponent(1);
+        right.add(passPanel, g2);
 
-        // Password input
+        // Gradient Login Button
         g2.gridy = 4;
-        JPasswordField txtPass = new JPasswordField(20);
-        txtPass.setBorder(compoundRoundedBorder(14, new Color(203, 213, 225), 2,
-                                                new Insets(10, 12, 10, 12)));
-        right.add(txtPass, g2);
+        g2.insets = new Insets(8, 0, 16, 0);
+        JButton btn = new JButton("Sign In") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+                // Gradient สีส้ม-ชมพู
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, new Color(255, 150, 100),
+                        getWidth(), 0, new Color(255, 180, 150));
+                g2d.setPaint(gradient);
+                g2d.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
 
-
-        // ปุ่ม Login
-        g2.gridy = 5;
-        JButton btn = new JButton("Login");
+                // Text
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
         btn.setFocusPainted(false);
-        btn.setForeground(Color.WHITE);
-        btn.setBackground(new Color(59, 130, 246)); // blue-500
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(0, 44));
+        btn.setPreferredSize(new Dimension(0, 48));
 
         btn.addActionListener(e -> {
             String email = txtUser.getText().trim();
             String pass = new String(txtPass.getPassword());
 
-            // เรียกใช้ Auth
             if (Auth.login(email, pass)) {
                 JOptionPane.showMessageDialog(this, "ยินดีต้อนรับ " + Auth.getAuthUser().getName());
-
-                // เปิดหน้าหลัก
                 new Profile().setVisible(true);
                 this.dispose();
             } else {
                 JOptionPane.showMessageDialog(this, "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
             }
-
         });
-        
         right.add(btn, g2);
-        
-        // แถวตัวเลือกเล็ก ๆ
-        g2.gridy = 7;
-        JPanel opts = new JPanel(new BorderLayout());
+
+        // "Not a member? Sign up now"
+        g2.gridy = 5;
+        g2.insets = new Insets(4, 0, 0, 0);
+        JPanel opts = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
         opts.setOpaque(false);
         JLabel member = new JLabel("Not a member?");
-        JLabel forgot = new JLabel("<html><u> Sign up now </u></html>");
-        forgot.setForeground(new Color(37, 99, 235)); // blue-600
-        forgot.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        forgot.addMouseListener(new java.awt.event.MouseAdapter() {
+        member.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        member.setForeground(new Color(107, 114, 128));
+
+        JLabel signup = new JLabel("Sign up now");
+        signup.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        signup.setForeground(new Color(255, 120, 80));
+        signup.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        signup.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 new Register().setVisible(true);
                 dispose();
             }
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                signup.setText("<html><u>Sign up now</u></html>");
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                signup.setText("Sign up now");
+            }
         });
-        opts.add(member, BorderLayout.WEST);
-        opts.add(forgot, BorderLayout.EAST);
+        opts.add(member);
+        opts.add(signup);
         right.add(opts, g2);
 
-        // ดันเนื้อหาขึ้นเล็กน้อยด้วย weighty
-        g2.gridy = 8;
+        // Spacer
+        g2.gridy = 6;
         g2.weighty = 1;
         right.add(Box.createVerticalStrut(1), g2);
 
-        // ใส่การ์ดลงคอลัมน์ขวา
-        gc.gridx = 1; gc.gridy = 0;
-        gc.weightx = 1.0; gc.weighty = 1;
+        gc.gridx = 1;
+        gc.gridy = 0;
+        gc.weightx = 0.55;
+        gc.weighty = 1;
         main.add(right, gc);
 
         root.add(main, BorderLayout.CENTER);
-
-
-        
         getRootPane().setDefaultButton(btn);
     }
 
-    /** รวม RoundedBorder (เส้น) + EmptyBorder (padding ภายใน) */
-    private static Border compoundRoundedBorder(int radius, Color lineColor, int thickness, Insets innerPadding) {
-        return BorderFactory.createCompoundBorder(
-                new RoundedLineBorder(lineColor, thickness, radius),
-                new EmptyBorder(innerPadding)
-        );
+    // สร้าง Input พร้อม Icon
+    private JPanel createInputWithIcon(String iconText, String placeholder) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedLineBorder(new Color(229, 231, 235), 1, 12),
+                new EmptyBorder(12, 14, 12, 14)));
+
+        JLabel icon = new JLabel(iconText);
+        icon.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        icon.setForeground(new Color(156, 163, 175));
+        icon.setBorder(new EmptyBorder(0, 0, 0, 10));
+
+        JTextField field = new JTextField();
+        field.setBorder(null);
+        field.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        field.setForeground(new Color(55, 65, 81));
+
+        // Placeholder
+        field.setText(placeholder);
+        field.setForeground(new Color(156, 163, 175));
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (field.getText().equals(placeholder)) {
+                    field.setText("");
+                    field.setForeground(new Color(55, 65, 81));
+                }
+            }
+
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (field.getText().isEmpty()) {
+                    field.setText(placeholder);
+                    field.setForeground(new Color(156, 163, 175));
+                }
+            }
+        });
+
+        panel.add(icon, BorderLayout.WEST);
+        panel.add(field, BorderLayout.CENTER);
+        return panel;
     }
 
-    // ---- main สำหรับรันทดสอบ ----
+    private JPanel createPasswordInputWithIcon() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedLineBorder(new Color(229, 231, 235), 1, 12),
+                new EmptyBorder(12, 14, 12, 14)));
+
+        JLabel icon = new JLabel("🔒");
+        icon.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        icon.setForeground(new Color(156, 163, 175));
+        icon.setBorder(new EmptyBorder(0, 0, 0, 10));
+
+        JPasswordField field = new JPasswordField();
+        field.setBorder(null);
+        field.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        field.setForeground(new Color(55, 65, 81));
+        field.setEchoChar((char) 0);
+
+        // Placeholder
+        field.setText("Password");
+        field.setForeground(new Color(156, 163, 175));
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (new String(field.getPassword()).equals("Password")) {
+                    field.setText("");
+                    field.setEchoChar('•');
+                    field.setForeground(new Color(55, 65, 81));
+                }
+            }
+
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (field.getPassword().length == 0) {
+                    field.setEchoChar((char) 0);
+                    field.setText("Password");
+                    field.setForeground(new Color(156, 163, 175));
+                }
+            }
+        });
+
+        panel.add(icon, BorderLayout.WEST);
+        panel.add(field, BorderLayout.CENTER);
+        return panel;
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new Login().setVisible(true));
     }

@@ -1,5 +1,6 @@
 package ui;
 
+import model.PaidJobEntity;
 import service.API;
 import service.Auth;
 import service.CompletedAssignment;
@@ -288,7 +289,7 @@ public class Workmenu extends JFrame {
         btnPanel.setOpaque(false);
 
         completeBtn = createGradientButton("Work completed", new Color(255, 160, 160), new Color(255, 200, 150));
-        deleteBtn = createSolidButton("Delete Job", new Color(234, 85, 98));
+        deleteBtn = createSolidButton("Cancelled Job", new Color(234, 85, 98));
 
         completeBtn.addActionListener(e -> {
             if (currentSelectedJob == null)
@@ -513,6 +514,11 @@ public class Workmenu extends JFrame {
         this.currentSelectedJob = job;
         Unique = job.jobId;
         centerCardTitle.setText(" " + job.title);
+        ArrayList<PaidJobEntity> paid = API.getPaidJob(job.jobId);
+        int hoursRate = 0;
+        for(PaidJobEntity i : paid){
+            hoursRate = i.getHourRate();
+        }
 
         centerImageLabel.setIcon(loadAndResizeImage(job.imagePath, 250, 300));
 
@@ -558,7 +564,7 @@ public class Workmenu extends JFrame {
 
         String typeDisplay = (job.jobType == null) ? "-" : job.jobType;
         if (typeDisplay.equalsIgnoreCase("paid"))
-            typeDisplay = "งานมีค่าตอบแทน";
+            typeDisplay = "งานมีค่าตอบแทน " + hoursRate + " บาท/ชั่วโมง";
         else if (typeDisplay.equalsIgnoreCase("volunteer"))
             typeDisplay = "งานจิตอาสา";
 
@@ -567,7 +573,7 @@ public class Workmenu extends JFrame {
 
         // Hide buttons when status is complete or done
         boolean isComplete = job.status != null &&
-                (job.status.equalsIgnoreCase("complete") || job.status.equalsIgnoreCase("done"));
+                (job.status.equalsIgnoreCase("complete") || job.status.equalsIgnoreCase("cancelled"));
         completeBtn.setVisible(!isComplete);
         deleteBtn.setVisible(!isComplete);
         editBtn.setVisible(!isComplete);

@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
+import model.History;
+import model.HistoryEntity;
 import model.JobAssignment;
 import model.Profiles;
 import service.API;
@@ -63,7 +65,7 @@ public class Profile extends JFrame {
         this.nameUser = (targetName != null) ? targetName : "Unknown User";
         this.statusUser = "student";
         this.txtIdUser = stdId;
-        this.txtEmail = ""; // Email not publicly shown for other users
+        this.txtEmail = WorkerManager.getStudentEmail(stdId); // ดึง email ของ user ที่ดู
 
         initialize();
     }
@@ -209,14 +211,25 @@ public class Profile extends JFrame {
         gbc.gridy = 1;
         gbc.weighty = 1.0;
 
-        // Count Jobs Logic
-        ArrayList<JobAssignment> jobAss = API.getUserAssign(txtIdUser);
+        // Count Jobs Logic - ใช้ targetStdId เมื่อดูโปรไฟล์ผู้อื่น
+        String stdIdForHistory = isViewingOther ? targetStdId
+                : (Auth.getAuthUser() != null ? Auth.getAuthUser().getStd_id() : null);
+
+        ArrayList<HistoryEntity> jobAss = new ArrayList<>();
+        if (stdIdForHistory != null) {
+            jobAss = API.getHistory(stdIdForHistory);
+        }
+
         int countComplete = 0;
-        if (jobAss != null) {
-            for (JobAssignment i : jobAss) {
-                if ("complete".equalsIgnoreCase(i.getStatus())) {
-                    countComplete++;
-                }
+        int countAbsent = 0;
+        int countHours = 0;
+        for (HistoryEntity i : jobAss) {
+            if ("complete".equalsIgnoreCase(i.getStatus())) {
+                countHours += i.getHours();
+                countComplete++;
+            }
+            if ("absent".equalsIgnoreCase(i.getStatus())) {
+                countAbsent++;
             }
         }
 
@@ -232,15 +245,21 @@ public class Profile extends JFrame {
         bioTitle.setFont(FONT_THAI_BOLD);
         bioTitle.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.BLACK));
 
-        JLabel jobCount = new JLabel("งานที่ทำสำเร็จ : " + countComplete + " งาน");
-        jobCount.setFont(FONT_THAI);
-
         JPanel titleWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         titleWrapper.setOpaque(false);
         titleWrapper.add(bioTitle);
 
         bioHeader.add(titleWrapper, BorderLayout.NORTH);
-        bioHeader.add(jobCount, BorderLayout.SOUTH);
+        // แสดง stats สำหรับ student หรือเมื่อดูโปรไฟล์ผู้อื่น
+        if (statusUser.equals("student") || isViewingOther) {
+            JLabel hourCount = new JLabel("จำนวนชั่วโมงการทำงาน : " + countHours + " ชั่วโมง");
+            hourCount.setFont(FONT_THAI);
+            JLabel jobCount = new JLabel(
+                    "งานที่ทำสำเร็จ : " + countComplete + " งาน" + " | " + "ขาดงาน : " + countAbsent + " งาน");
+            jobCount.setFont(FONT_THAI);
+            bioHeader.add(jobCount, BorderLayout.SOUTH);
+            bioHeader.add(hourCount);
+        }
 
         bioPanel.add(bioHeader, BorderLayout.NORTH);
 

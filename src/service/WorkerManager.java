@@ -193,4 +193,21 @@ public class WorkerManager {
         }
         return -1;
     }
+
+    public static String getStudentEmail(String stdId) {
+        String sql = "SELECT email FROM user WHERE std_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, stdId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("email");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("ERROR in getStudentEmail: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "";
+    }
 }
