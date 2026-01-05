@@ -24,6 +24,8 @@ import service.*;
 import ui.component.FilterUI;
 import ui.component.Navbar;
 
+import static service.JobService.filterAppliedJobs;
+
 public class AvailableJob extends JFrame {
 
     private static final Color BG_COLOR = new Color(240, 240, 240);
@@ -47,54 +49,12 @@ public class AvailableJob extends JFrame {
             allJobs = new ArrayList<>();
 
         // 2. กรองงานที่สมัครไปแล้วทิ้ง ก่อนจะเริ่มวาดหน้าจอ
-        filterAppliedJobs();
+        JobService.filterAppliedJobs(allJobs);
 
         initialize();
     }
 
-    // ฟังก์ชันสำหรับกรองงานที่ user ปัจจุบันสมัครไปแล้ว
-    private void filterAppliedJobs() {
-        // ถ้ายังไม่ได้ Login ให้ข้ามไป
-        if (Auth.getAuthUser() == null)
-            return;
 
-        List<String> appliedJobIds = new ArrayList<>();
-        String currentStdId = null;
-
-        // เช็คว่าเป็น Student หรือไม่ เพื่อดึง ID ให้ถูกต้อง
-        if (Auth.getAuthUser() instanceof Student) {
-            Student s = (Student) Auth.getAuthUser();
-            currentStdId = s.getStdId();
-        } else {
-            currentStdId = Auth.getAuthUser().getStd_id();
-        }
-
-        if (currentStdId == null) {
-            // System.err.println("Warning: std_id is null for user " +
-            // Auth.getAuthUser().getName());
-            return;
-        }
-
-        String sql = "SELECT job_id FROM job_assignment WHERE std_id = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, currentStdId);
-            ResultSet rs = pstmt.executeQuery();
-
-            // เก็บ ID ของงานที่สมัครแล้วไว้ใน List
-            while (rs.next()) {
-                appliedJobIds.add(String.valueOf(rs.getInt("job_id")));
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // ลบงานที่มี ID ตรงกับใน appliedJobIds ออกจาก allJobs
-        allJobs.removeIf(job -> appliedJobIds.contains(job.jobId));
-    }
 
     private void initialize() {
         setTitle("Available Job");

@@ -11,13 +11,12 @@ public class DatabaseConnection {
     // โหลด Driver แค่ครั้งเดียว
     static {
         try {
-            // ไม่ต้องใช้ Class.forName() ใน Java เวอร์ชันใหม่ๆ แต่ใส่ไว้กันเหนียวได้
             Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
             throw new RuntimeException("ไม่เจอ Driver MySQL กรุณาเช็ค Library!");
         }
     }
+
 
     // เมธอดสำหรับขอ Connection
     public static Connection getConnection() throws SQLException {
